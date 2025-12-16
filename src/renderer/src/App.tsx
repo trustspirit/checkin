@@ -1,10 +1,11 @@
+import React from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import HomePage from './pages/HomePage'
 import ParticipantDetailPage from './pages/ParticipantDetailPage'
 import ParticipantsListPage from './pages/ParticipantsListPage'
 import ImportPage from './pages/ImportPage'
 
-function App(): JSX.Element {
+function App(): React.ReactElement {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       <nav className="bg-white border-b border-slate-200 px-8 py-4 flex items-center gap-8 shadow-sm">
@@ -17,7 +18,9 @@ function App(): JSX.Element {
             end
             className={({ isActive }) =>
               `px-4 py-2 rounded-md font-medium transition-colors ${
-                isActive ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-blue-600 hover:text-white'
+                isActive
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-600 hover:bg-blue-600 hover:text-white'
               }`
             }
           >
@@ -27,7 +30,9 @@ function App(): JSX.Element {
             to="/participants"
             className={({ isActive }) =>
               `px-4 py-2 rounded-md font-medium transition-colors ${
-                isActive ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-blue-600 hover:text-white'
+                isActive
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-600 hover:bg-blue-600 hover:text-white'
               }`
             }
           >
@@ -37,7 +42,9 @@ function App(): JSX.Element {
             to="/import"
             className={({ isActive }) =>
               `px-4 py-2 rounded-md font-medium transition-colors ${
-                isActive ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-blue-600 hover:text-white'
+                isActive
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-600 hover:bg-blue-600 hover:text-white'
               }`
             }
           >

@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "composite": true,
+    "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
@@ -11,7 +12,9 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
+    "jsxImportSource": "react",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "types": ["node"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/renderer/src/*"]

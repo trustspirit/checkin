@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { searchParticipants } from '../services/firebase'
 import type { Participant } from '../types'
 
-function HomePage(): JSX.Element {
+function HomePage(): React.ReactElement {
   const [searchTerm, setSearchTerm] = useState('')
   const [results, setResults] = useState<Participant[]>([])
   const [isLoading, setIsLoading] = useState(false)

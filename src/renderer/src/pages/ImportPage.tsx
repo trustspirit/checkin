@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import Papa from 'papaparse'
 import { importParticipantsFromCSV } from '../services/firebase'
 import type { CSVParticipantRow } from '../types'
 
-function ImportPage(): JSX.Element {
+function ImportPage(): React.ReactElement {
   const [isImporting, setIsImporting] = useState(false)
   const [result, setResult] = useState<{ created: number; updated: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -34,23 +34,50 @@ function ImportPage(): JSX.Element {
               age: row.age || row.Age || row.AGE || '',
               stake: row.stake || row.Stake || row.STAKE || '',
               ward: row.ward || row.Ward || row.WARD || '',
-              phoneNumber: row.phoneNumber || row.phone_number || row.phone || row.Phone || row.PHONE || '',
+              phoneNumber:
+                row.phoneNumber || row.phone_number || row.phone || row.Phone || row.PHONE || '',
               email: row.email || row.Email || row.EMAIL || '',
-              groupName: row.groupName || row.group_name || row.group || row.Group || row.GROUP || '',
-              roomNumber: row.roomNumber || row.room_number || row.room || row.Room || row.ROOM || ''
+              groupName:
+                row.groupName || row.group_name || row.group || row.Group || row.GROUP || '',
+              roomNumber:
+                row.roomNumber || row.room_number || row.room || row.Room || row.ROOM || ''
             }
 
             // Collect any additional metadata
             const knownKeys = [
-              'name', 'Name', 'NAME',
-              'gender', 'Gender', 'GENDER',
-              'age', 'Age', 'AGE',
-              'stake', 'Stake', 'STAKE',
-              'ward', 'Ward', 'WARD',
-              'phoneNumber', 'phone_number', 'phone', 'Phone', 'PHONE',
-              'email', 'Email', 'EMAIL',
-              'groupName', 'group_name', 'group', 'Group', 'GROUP',
-              'roomNumber', 'room_number', 'room', 'Room', 'ROOM'
+              'name',
+              'Name',
+              'NAME',
+              'gender',
+              'Gender',
+              'GENDER',
+              'age',
+              'Age',
+              'AGE',
+              'stake',
+              'Stake',
+              'STAKE',
+              'ward',
+              'Ward',
+              'WARD',
+              'phoneNumber',
+              'phone_number',
+              'phone',
+              'Phone',
+              'PHONE',
+              'email',
+              'Email',
+              'EMAIL',
+              'groupName',
+              'group_name',
+              'group',
+              'Group',
+              'GROUP',
+              'roomNumber',
+              'room_number',
+              'room',
+              'Room',
+              'ROOM'
             ]
             Object.keys(row).forEach((key) => {
               if (!knownKeys.includes(key) && row[key]) {
@@ -168,12 +195,24 @@ function ImportPage(): JSX.Element {
                 <thead>
                   <tr className="bg-slate-50">
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">#</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Name</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Email</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Phone</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Ward</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Group</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Room</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                      Name
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                      Email
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                      Phone
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                      Ward
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                      Group
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                      Room
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -208,7 +247,8 @@ function ImportPage(): JSX.Element {
             <strong>Required columns:</strong> name, email
           </p>
           <p>
-            <strong>Optional columns:</strong> gender, age, stake, ward, phoneNumber (or phone), groupName (or group), roomNumber (or room)
+            <strong>Optional columns:</strong> gender, age, stake, ward, phoneNumber (or phone),
+            groupName (or group), roomNumber (or room)
           </p>
           <p>
             <strong>Metadata:</strong> Any additional columns will be stored as metadata
@@ -221,7 +261,7 @@ function ImportPage(): JSX.Element {
         <div className="mt-4">
           <h4 className="font-medium text-slate-800 mb-2">Example CSV:</h4>
           <pre className="bg-white p-3 rounded border border-slate-200 text-xs overflow-x-auto">
-{`name,email,phone,gender,age,ward,stake,group,room
+            {`name,email,phone,gender,age,ward,stake,group,room
 John Doe,john@example.com,555-1234,male,25,Ward 1,Stake A,Group Alpha,101
 Jane Smith,jane@example.com,555-5678,female,30,Ward 2,Stake A,Group Beta,102`}
           </pre>

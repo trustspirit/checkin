@@ -61,11 +61,13 @@ export const searchParticipants = async (searchTerm: string): Promise<Participan
       participants.push({
         id: doc.id,
         ...data,
-        checkIns: (data.checkIns || []).map((ci: { id: string; checkInTime: Timestamp; checkOutTime?: Timestamp }) => ({
-          ...ci,
-          checkInTime: convertTimestamp(ci.checkInTime),
-          checkOutTime: ci.checkOutTime ? convertTimestamp(ci.checkOutTime) : undefined
-        })),
+        checkIns: (data.checkIns || []).map(
+          (ci: { id: string; checkInTime: Timestamp; checkOutTime?: Timestamp }) => ({
+            ...ci,
+            checkInTime: convertTimestamp(ci.checkInTime),
+            checkOutTime: ci.checkOutTime ? convertTimestamp(ci.checkOutTime) : undefined
+          })
+        ),
         createdAt: convertTimestamp(data.createdAt),
         updatedAt: convertTimestamp(data.updatedAt)
       } as Participant)
@@ -85,11 +87,13 @@ export const getParticipantById = async (id: string): Promise<Participant | null
   return {
     id: docSnap.id,
     ...data,
-    checkIns: (data.checkIns || []).map((ci: { id: string; checkInTime: Timestamp; checkOutTime?: Timestamp }) => ({
-      ...ci,
-      checkInTime: convertTimestamp(ci.checkInTime),
-      checkOutTime: ci.checkOutTime ? convertTimestamp(ci.checkOutTime) : undefined
-    })),
+    checkIns: (data.checkIns || []).map(
+      (ci: { id: string; checkInTime: Timestamp; checkOutTime?: Timestamp }) => ({
+        ...ci,
+        checkInTime: convertTimestamp(ci.checkInTime),
+        checkOutTime: ci.checkOutTime ? convertTimestamp(ci.checkOutTime) : undefined
+      })
+    ),
     createdAt: convertTimestamp(data.createdAt),
     updatedAt: convertTimestamp(data.updatedAt)
   } as Participant
@@ -105,11 +109,13 @@ export const getAllParticipants = async (): Promise<Participant[]> => {
     return {
       id: doc.id,
       ...data,
-      checkIns: (data.checkIns || []).map((ci: { id: string; checkInTime: Timestamp; checkOutTime?: Timestamp }) => ({
-        ...ci,
-        checkInTime: convertTimestamp(ci.checkInTime),
-        checkOutTime: ci.checkOutTime ? convertTimestamp(ci.checkOutTime) : undefined
-      })),
+      checkIns: (data.checkIns || []).map(
+        (ci: { id: string; checkInTime: Timestamp; checkOutTime?: Timestamp }) => ({
+          ...ci,
+          checkInTime: convertTimestamp(ci.checkInTime),
+          checkOutTime: ci.checkOutTime ? convertTimestamp(ci.checkOutTime) : undefined
+        })
+      ),
       createdAt: convertTimestamp(data.createdAt),
       updatedAt: convertTimestamp(data.updatedAt)
     } as Participant
@@ -131,14 +137,20 @@ export const checkInParticipant = async (participantId: string): Promise<CheckIn
   }
 
   await updateDoc(docRef, {
-    checkIns: [...checkIns, { ...newCheckIn, checkInTime: Timestamp.fromDate(newCheckIn.checkInTime) }],
+    checkIns: [
+      ...checkIns,
+      { ...newCheckIn, checkInTime: Timestamp.fromDate(newCheckIn.checkInTime) }
+    ],
     updatedAt: Timestamp.now()
   })
 
   return newCheckIn
 }
 
-export const checkOutParticipant = async (participantId: string, checkInId: string): Promise<void> => {
+export const checkOutParticipant = async (
+  participantId: string,
+  checkInId: string
+): Promise<void> => {
   const docRef = doc(db, PARTICIPANTS_COLLECTION, participantId)
   const docSnap = await getDoc(docRef)
 
@@ -147,12 +159,14 @@ export const checkOutParticipant = async (participantId: string, checkInId: stri
   const data = docSnap.data()
   const checkIns = data.checkIns || []
 
-  const updatedCheckIns = checkIns.map((ci: { id: string; checkInTime: Timestamp; checkOutTime?: Timestamp }) => {
-    if (ci.id === checkInId) {
-      return { ...ci, checkOutTime: Timestamp.now() }
+  const updatedCheckIns = checkIns.map(
+    (ci: { id: string; checkInTime: Timestamp; checkOutTime?: Timestamp }) => {
+      if (ci.id === checkInId) {
+        return { ...ci, checkOutTime: Timestamp.now() }
+      }
+      return ci
     }
-    return ci
-  })
+  )
 
   await updateDoc(docRef, {
     checkIns: updatedCheckIns,
@@ -195,7 +209,10 @@ export const createOrGetGroup = async (groupName: string): Promise<Group> => {
 
   const newGroupRef = doc(groupsRef)
   const now = Timestamp.now()
-  const newGroup: Omit<Group, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: Timestamp; updatedAt: Timestamp } = {
+  const newGroup: Omit<Group, 'id' | 'createdAt' | 'updatedAt'> & {
+    createdAt: Timestamp
+    updatedAt: Timestamp
+  } = {
     name: groupName,
     participantCount: 0,
     createdAt: now,
@@ -212,7 +229,11 @@ export const createOrGetGroup = async (groupName: string): Promise<Group> => {
   }
 }
 
-export const assignParticipantToGroup = async (participantId: string, groupId: string, groupName: string): Promise<void> => {
+export const assignParticipantToGroup = async (
+  participantId: string,
+  groupId: string,
+  groupName: string
+): Promise<void> => {
   const participantRef = doc(db, PARTICIPANTS_COLLECTION, participantId)
   const participantSnap = await getDoc(participantRef)
 
@@ -264,7 +285,10 @@ export const getAllRooms = async (): Promise<Room[]> => {
   })
 }
 
-export const createOrGetRoom = async (roomNumber: string, maxCapacity: number = 4): Promise<Room> => {
+export const createOrGetRoom = async (
+  roomNumber: string,
+  maxCapacity: number = 4
+): Promise<Room> => {
   const roomsRef = collection(db, ROOMS_COLLECTION)
   const q = query(roomsRef, where('roomNumber', '==', roomNumber), limit(1))
   const snapshot = await getDocs(q)
@@ -282,7 +306,10 @@ export const createOrGetRoom = async (roomNumber: string, maxCapacity: number = 
 
   const newRoomRef = doc(roomsRef)
   const now = Timestamp.now()
-  const newRoom: Omit<Room, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: Timestamp; updatedAt: Timestamp } = {
+  const newRoom: Omit<Room, 'id' | 'createdAt' | 'updatedAt'> & {
+    createdAt: Timestamp
+    updatedAt: Timestamp
+  } = {
     roomNumber,
     maxCapacity,
     currentOccupancy: 0,
@@ -300,7 +327,11 @@ export const createOrGetRoom = async (roomNumber: string, maxCapacity: number = 
   }
 }
 
-export const assignParticipantToRoom = async (participantId: string, roomId: string, roomNumber: string): Promise<void> => {
+export const assignParticipantToRoom = async (
+  participantId: string,
+  roomId: string,
+  roomNumber: string
+): Promise<void> => {
   const participantRef = doc(db, PARTICIPANTS_COLLECTION, participantId)
   const participantSnap = await getDoc(participantRef)
 
@@ -345,7 +376,9 @@ export const assignParticipantToRoom = async (participantId: string, roomId: str
 }
 
 // CSV Import
-export const importParticipantsFromCSV = async (rows: CSVParticipantRow[]): Promise<{ created: number; updated: number }> => {
+export const importParticipantsFromCSV = async (
+  rows: CSVParticipantRow[]
+): Promise<{ created: number; updated: number }> => {
   let created = 0
   let updated = 0
 
@@ -359,7 +392,17 @@ export const importParticipantsFromCSV = async (rows: CSVParticipantRow[]): Prom
     const snapshot = await getDocs(q)
 
     const metadata: Record<string, unknown> = {}
-    const knownFields = ['name', 'gender', 'age', 'stake', 'ward', 'phoneNumber', 'email', 'groupName', 'roomNumber']
+    const knownFields = [
+      'name',
+      'gender',
+      'age',
+      'stake',
+      'ward',
+      'phoneNumber',
+      'email',
+      'groupName',
+      'roomNumber'
+    ]
     Object.keys(row).forEach((key) => {
       if (!knownFields.includes(key) && row[key]) {
         metadata[key] = row[key]
@@ -438,7 +481,10 @@ export const importParticipantsFromCSV = async (rows: CSVParticipantRow[]): Prom
         stake: row.stake || existingData.stake,
         ward: row.ward || existingData.ward,
         phoneNumber: row.phoneNumber || existingData.phoneNumber,
-        metadata: Object.keys(metadata).length > 0 ? { ...existingData.metadata, ...metadata } : existingData.metadata,
+        metadata:
+          Object.keys(metadata).length > 0
+            ? { ...existingData.metadata, ...metadata }
+            : existingData.metadata,
         groupId: groupId || existingData.groupId,
         groupName: groupName || existingData.groupName,
         roomId: roomId || existingData.roomId,

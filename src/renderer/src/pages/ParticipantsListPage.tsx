@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getAllParticipants, getAllGroups, getAllRooms } from '../services/firebase'
 import type { Participant, Group, Room } from '../types'
 
-function ParticipantsListPage(): JSX.Element {
+function ParticipantsListPage(): React.ReactElement {
   const [participants, setParticipants] = useState<Participant[]>([])
   const [groups, setGroups] = useState<Group[]>([])
   const [rooms, setRooms] = useState<Room[]>([])
@@ -116,12 +116,20 @@ function ParticipantsListPage(): JSX.Element {
               <thead>
                 <tr className="bg-slate-50">
                   <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Name</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Email</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Phone</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                    Email
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                    Phone
+                  </th>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Ward</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Group</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                    Group
+                  </th>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Room</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Status</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                    Status
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -182,9 +190,15 @@ function ParticipantsListPage(): JSX.Element {
             <table className="w-full">
               <thead>
                 <tr className="bg-slate-50">
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Group Name</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Members</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Created</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                    Group Name
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                    Members
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                    Created
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -197,7 +211,9 @@ function ParticipantsListPage(): JSX.Element {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-slate-600">
-                      {new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(group.createdAt)}
+                      {new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(
+                        group.createdAt
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -217,10 +233,18 @@ function ParticipantsListPage(): JSX.Element {
             <table className="w-full">
               <thead>
                 <tr className="bg-slate-50">
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Room Number</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Occupancy</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Status</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Created</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                    Room Number
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                    Occupancy
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                    Created
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -229,13 +253,19 @@ function ParticipantsListPage(): JSX.Element {
                   const occupancyPercent = (room.currentOccupancy / room.maxCapacity) * 100
                   return (
                     <tr key={room.id} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="px-4 py-3 font-medium text-slate-800">Room {room.roomNumber}</td>
+                      <td className="px-4 py-3 font-medium text-slate-800">
+                        Room {room.roomNumber}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full ${
-                                isFull ? 'bg-red-500' : occupancyPercent > 75 ? 'bg-yellow-500' : 'bg-green-500'
+                                isFull
+                                  ? 'bg-red-500'
+                                  : occupancyPercent > 75
+                                    ? 'bg-yellow-500'
+                                    : 'bg-green-500'
                               }`}
                               style={{ width: `${occupancyPercent}%` }}
                             />
@@ -257,7 +287,9 @@ function ParticipantsListPage(): JSX.Element {
                         )}
                       </td>
                       <td className="px-4 py-3 text-slate-600">
-                        {new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(room.createdAt)}
+                        {new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(
+                          room.createdAt
+                        )}
                       </td>
                     </tr>
                   )

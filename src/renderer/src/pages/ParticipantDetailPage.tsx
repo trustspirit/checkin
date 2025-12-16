@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import {
   getParticipantById,
   checkInParticipant,
@@ -13,9 +13,8 @@ import {
 } from '../services/firebase'
 import type { Participant, Group, Room, CheckInRecord } from '../types'
 
-function ParticipantDetailPage(): JSX.Element {
+function ParticipantDetailPage(): React.ReactElement {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const [participant, setParticipant] = useState<Participant | null>(null)
   const [groups, setGroups] = useState<Group[]>([])
   const [rooms, setRooms] = useState<Room[]>([])
@@ -27,17 +26,12 @@ function ParticipantDetailPage(): JSX.Element {
   const [newRoomNumber, setNewRoomNumber] = useState('')
   const [newRoomCapacity, setNewRoomCapacity] = useState(4)
 
-  useEffect(() => {
-    if (id) {
-      loadData()
-    }
-  }, [id])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (!id) return
     setIsLoading(true)
     try {
       const [participantData, groupsData, roomsData] = await Promise.all([
-        getParticipantById(id!),
+        getParticipantById(id),
         getAllGroups(),
         getAllRooms()
       ])
@@ -49,7 +43,11 @@ function ParticipantDetailPage(): JSX.Element {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [id])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   const handleCheckIn = async () => {
     if (!participant) return
@@ -161,7 +159,10 @@ function ParticipantDetailPage(): JSX.Element {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Link to="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-blue-600 mb-6 font-medium">
+      <Link
+        to="/"
+        className="inline-flex items-center gap-2 text-slate-500 hover:text-blue-600 mb-6 font-medium"
+      >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
@@ -222,7 +223,9 @@ function ParticipantDetailPage(): JSX.Element {
             </div>
             <div className="bg-slate-50 rounded-lg p-3">
               <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Gender</div>
-              <div className="font-medium text-slate-800 capitalize">{participant.gender || '-'}</div>
+              <div className="font-medium text-slate-800 capitalize">
+                {participant.gender || '-'}
+              </div>
             </div>
             <div className="bg-slate-50 rounded-lg p-3">
               <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Age</div>
@@ -253,7 +256,9 @@ function ParticipantDetailPage(): JSX.Element {
                     {participant.groupName}
                   </span>
                 ) : (
-                  <span className="px-4 py-2 bg-slate-200 text-slate-500 rounded-full">Not assigned</span>
+                  <span className="px-4 py-2 bg-slate-200 text-slate-500 rounded-full">
+                    Not assigned
+                  </span>
                 )}
                 <button
                   onClick={() => setShowGroupSelect(!showGroupSelect)}
@@ -280,7 +285,9 @@ function ParticipantDetailPage(): JSX.Element {
                     ))}
                   </div>
                   <div className="border-t border-slate-200 pt-3">
-                    <div className="text-sm font-medium text-slate-700 mb-2">Or create new group</div>
+                    <div className="text-sm font-medium text-slate-700 mb-2">
+                      Or create new group
+                    </div>
                     <div className="flex gap-2">
                       <input
                         type="text"
@@ -311,7 +318,9 @@ function ParticipantDetailPage(): JSX.Element {
                     Room {participant.roomNumber}
                   </span>
                 ) : (
-                  <span className="px-4 py-2 bg-slate-200 text-slate-500 rounded-full">Not assigned</span>
+                  <span className="px-4 py-2 bg-slate-200 text-slate-500 rounded-full">
+                    Not assigned
+                  </span>
                 )}
                 <button
                   onClick={() => setShowRoomSelect(!showRoomSelect)}
@@ -331,7 +340,9 @@ function ParticipantDetailPage(): JSX.Element {
                           key={room.id}
                           onClick={() => !isFull && handleRoomAssign(room)}
                           className={`flex justify-between items-center px-3 py-2 rounded ${
-                            isFull ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50 cursor-pointer'
+                            isFull
+                              ? 'opacity-50 cursor-not-allowed'
+                              : 'hover:bg-slate-50 cursor-pointer'
                           }`}
                         >
                           <span>Room {room.roomNumber}</span>
@@ -347,7 +358,9 @@ function ParticipantDetailPage(): JSX.Element {
                     })}
                   </div>
                   <div className="border-t border-slate-200 pt-3">
-                    <div className="text-sm font-medium text-slate-700 mb-2">Or create new room</div>
+                    <div className="text-sm font-medium text-slate-700 mb-2">
+                      Or create new room
+                    </div>
                     <div className="flex gap-2">
                       <input
                         type="text"
@@ -392,9 +405,13 @@ function ParticipantDetailPage(): JSX.Element {
                   className="flex justify-between items-center bg-slate-50 rounded-lg px-4 py-3"
                 >
                   <div>
-                    <span className="font-medium text-slate-800">In: {formatDate(checkIn.checkInTime)}</span>
+                    <span className="font-medium text-slate-800">
+                      In: {formatDate(checkIn.checkInTime)}
+                    </span>
                     {checkIn.checkOutTime && (
-                      <span className="text-slate-500 ml-4">Out: {formatDate(checkIn.checkOutTime)}</span>
+                      <span className="text-slate-500 ml-4">
+                        Out: {formatDate(checkIn.checkOutTime)}
+                      </span>
                     )}
                   </div>
                   <span
