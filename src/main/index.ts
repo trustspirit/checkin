@@ -3,6 +3,69 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import fs from 'fs'
 
+const getConfigPathStorePath = () => join(app.getPath('userData'), 'config-path.txt')
+
+interface FirebaseConfig {
+  apiKey: string
+  authDomain: string
+  projectId: string
+  storageBucket: string
+  messagingSenderId: string
+  appId: string
+}
+
+interface ConfigInfo {
+  config: FirebaseConfig | null
+  filePath: string | null
+}
+
+function loadStoredConfigPath(): string | null {
+  try {
+    const storePath = getConfigPathStorePath()
+    if (fs.existsSync(storePath)) {
+      return fs.readFileSync(storePath, 'utf-8').trim()
+    }
+  } catch {
+    return null
+  }
+  return null
+}
+
+function saveConfigPath(filePath: string): void {
+  try {
+    const storePath = getConfigPathStorePath()
+    fs.writeFileSync(storePath, filePath, 'utf-8')
+  } catch {
+    console.error('Failed to save config path')
+  }
+}
+
+function loadConfigFromPath(filePath: string): FirebaseConfig | null {
+  try {
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf-8')
+      const config = JSON.parse(content) as FirebaseConfig
+      if (config.apiKey && config.projectId) {
+        return config
+      }
+    }
+  } catch {
+    return null
+  }
+  return null
+}
+
+function loadConfig(): ConfigInfo {
+  const storedPath = loadStoredConfigPath()
+  if (storedPath) {
+    const config = loadConfigFromPath(storedPath)
+    if (config) {
+      return { config, filePath: storedPath }
+    }
+  }
+  return { config: null, filePath: null }
+}
+
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1200,
@@ -10,7 +73,7 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false,
       contextIsolation: true,
       nodeIntegration: false
@@ -40,7 +103,6 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC handler for file dialog
   ipcMain.handle('dialog:openFile', async () => {
     const result = await dialog.showOpenDialog({
       properties: ['openFile'],
@@ -54,6 +116,43 @@ app.whenReady().then(() => {
     const filePath = result.filePaths[0]
     const content = fs.readFileSync(filePath, 'utf-8')
     return content
+  })
+
+  ipcMain.handle('config:load', () => {
+    return loadConfig()
+  })
+
+  ipcMain.handle('config:importAndSave', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [{ name: 'JSON Files', extensions: ['json'] }]
+    })
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, error: 'No file selected' }
+    }
+
+    const filePath = result.filePaths[0]
+    const config = loadConfigFromPath(filePath)
+
+    if (!config) {
+      return { success: false, error: 'Invalid config file. Must contain apiKey and projectId.' }
+    }
+
+    saveConfigPath(filePath)
+    return { success: true, config, filePath }
+  })
+
+  ipcMain.handle('config:clear', () => {
+    try {
+      const storePath = getConfigPathStorePath()
+      if (fs.existsSync(storePath)) {
+        fs.unlinkSync(storePath)
+      }
+      return true
+    } catch {
+      return false
+    }
   })
 
   createWindow()

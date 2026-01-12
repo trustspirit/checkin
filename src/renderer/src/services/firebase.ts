@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app'
+import { initializeApp, deleteApp, FirebaseApp } from 'firebase/app'
 import {
   getFirestore,
   collection,
@@ -13,24 +13,73 @@ import {
   Timestamp,
   writeBatch,
   increment,
-  limit
+  limit,
+  Firestore
 } from 'firebase/firestore'
 import type { Participant, Group, Room, CheckInRecord, CSVParticipantRow } from '../types'
 
-// Firebase configuration - Replace with your own config
-const firebaseConfig = {
+interface FirebaseConfig {
+  apiKey: string
+  authDomain: string
+  projectId: string
+  storageBucket: string
+  messagingSenderId: string
+  appId: string
+}
+
+let app: FirebaseApp | null = null
+let db: Firestore | null = null
+
+const getDefaultConfig = (): FirebaseConfig => ({
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
   appId: import.meta.env.VITE_FIREBASE_APP_ID || ''
+})
+
+const initializeFirebaseApp = async (): Promise<void> => {
+  let config: FirebaseConfig | null = null
+
+  try {
+    const configInfo = await window.electronAPI.loadConfig()
+    config = configInfo.config
+  } catch {
+    console.log('Could not load config from storage, using env defaults')
+  }
+
+  if (!config || !config.projectId) {
+    config = getDefaultConfig()
+  }
+
+  if (config.projectId) {
+    app = initializeApp(config)
+    db = getFirestore(app)
+  }
 }
 
-const app = initializeApp(firebaseConfig)
-const db = getFirestore(app)
+export const reinitializeFirebase = async (config: FirebaseConfig): Promise<void> => {
+  if (app) {
+    await deleteApp(app)
+  }
+  app = initializeApp(config)
+  db = getFirestore(app)
+}
 
-// Collections
+export const isFirebaseConfigured = (): boolean => {
+  return db !== null
+}
+
+initializeFirebaseApp()
+
+const getDb = (): Firestore => {
+  if (!db) {
+    throw new Error('Firebase is not configured. Please set up your database in Settings.')
+  }
+  return db
+}
+
 const PARTICIPANTS_COLLECTION = 'participants'
 const GROUPS_COLLECTION = 'groups'
 const ROOMS_COLLECTION = 'rooms'
@@ -47,7 +96,7 @@ export const searchParticipants = async (searchTerm: string): Promise<Participan
   if (!searchTerm.trim()) return []
 
   const searchLower = searchTerm.toLowerCase()
-  const participantsRef = collection(db, PARTICIPANTS_COLLECTION)
+  const participantsRef = collection(getDb(), PARTICIPANTS_COLLECTION)
   const snapshot = await getDocs(participantsRef)
 
   const participants: Participant[] = []
@@ -78,7 +127,7 @@ export const searchParticipants = async (searchTerm: string): Promise<Participan
 }
 
 export const getParticipantById = async (id: string): Promise<Participant | null> => {
-  const docRef = doc(db, PARTICIPANTS_COLLECTION, id)
+  const docRef = doc(getDb(), PARTICIPANTS_COLLECTION, id)
   const docSnap = await getDoc(docRef)
 
   if (!docSnap.exists()) return null
@@ -100,7 +149,7 @@ export const getParticipantById = async (id: string): Promise<Participant | null
 }
 
 export const getAllParticipants = async (): Promise<Participant[]> => {
-  const participantsRef = collection(db, PARTICIPANTS_COLLECTION)
+  const participantsRef = collection(getDb(), PARTICIPANTS_COLLECTION)
   const q = query(participantsRef, orderBy('name'))
   const snapshot = await getDocs(q)
 
@@ -123,7 +172,7 @@ export const getAllParticipants = async (): Promise<Participant[]> => {
 }
 
 export const checkInParticipant = async (participantId: string): Promise<CheckInRecord> => {
-  const docRef = doc(db, PARTICIPANTS_COLLECTION, participantId)
+  const docRef = doc(getDb(), PARTICIPANTS_COLLECTION, participantId)
   const docSnap = await getDoc(docRef)
 
   if (!docSnap.exists()) throw new Error('Participant not found')
@@ -151,7 +200,7 @@ export const checkOutParticipant = async (
   participantId: string,
   checkInId: string
 ): Promise<void> => {
-  const docRef = doc(db, PARTICIPANTS_COLLECTION, participantId)
+  const docRef = doc(getDb(), PARTICIPANTS_COLLECTION, participantId)
   const docSnap = await getDoc(docRef)
 
   if (!docSnap.exists()) throw new Error('Participant not found')
@@ -176,7 +225,7 @@ export const checkOutParticipant = async (
 
 // Group Services
 export const getAllGroups = async (): Promise<Group[]> => {
-  const groupsRef = collection(db, GROUPS_COLLECTION)
+  const groupsRef = collection(getDb(), GROUPS_COLLECTION)
   const q = query(groupsRef, orderBy('name'))
   const snapshot = await getDocs(q)
 
@@ -192,7 +241,7 @@ export const getAllGroups = async (): Promise<Group[]> => {
 }
 
 export const createOrGetGroup = async (groupName: string): Promise<Group> => {
-  const groupsRef = collection(db, GROUPS_COLLECTION)
+  const groupsRef = collection(getDb(), GROUPS_COLLECTION)
   const q = query(groupsRef, where('name', '==', groupName), limit(1))
   const snapshot = await getDocs(q)
 
@@ -234,13 +283,13 @@ export const assignParticipantToGroup = async (
   groupId: string,
   groupName: string
 ): Promise<void> => {
-  const participantRef = doc(db, PARTICIPANTS_COLLECTION, participantId)
+  const participantRef = doc(getDb(), PARTICIPANTS_COLLECTION, participantId)
   const participantSnap = await getDoc(participantRef)
 
   if (!participantSnap.exists()) throw new Error('Participant not found')
 
   const oldGroupId = participantSnap.data().groupId
-  const batch = writeBatch(db)
+  const batch = writeBatch(getDb())
 
   // Update participant
   batch.update(participantRef, {
@@ -251,7 +300,7 @@ export const assignParticipantToGroup = async (
 
   // Decrement old group count if exists
   if (oldGroupId) {
-    const oldGroupRef = doc(db, GROUPS_COLLECTION, oldGroupId)
+    const oldGroupRef = doc(getDb(), GROUPS_COLLECTION, oldGroupId)
     batch.update(oldGroupRef, {
       participantCount: increment(-1),
       updatedAt: Timestamp.now()
@@ -259,7 +308,7 @@ export const assignParticipantToGroup = async (
   }
 
   // Increment new group count
-  const newGroupRef = doc(db, GROUPS_COLLECTION, groupId)
+  const newGroupRef = doc(getDb(), GROUPS_COLLECTION, groupId)
   batch.update(newGroupRef, {
     participantCount: increment(1),
     updatedAt: Timestamp.now()
@@ -270,7 +319,7 @@ export const assignParticipantToGroup = async (
 
 // Room Services
 export const getAllRooms = async (): Promise<Room[]> => {
-  const roomsRef = collection(db, ROOMS_COLLECTION)
+  const roomsRef = collection(getDb(), ROOMS_COLLECTION)
   const q = query(roomsRef, orderBy('roomNumber'))
   const snapshot = await getDocs(q)
 
@@ -289,7 +338,7 @@ export const createOrGetRoom = async (
   roomNumber: string,
   maxCapacity: number = 4
 ): Promise<Room> => {
-  const roomsRef = collection(db, ROOMS_COLLECTION)
+  const roomsRef = collection(getDb(), ROOMS_COLLECTION)
   const q = query(roomsRef, where('roomNumber', '==', roomNumber), limit(1))
   const snapshot = await getDocs(q)
 
@@ -332,12 +381,12 @@ export const assignParticipantToRoom = async (
   roomId: string,
   roomNumber: string
 ): Promise<void> => {
-  const participantRef = doc(db, PARTICIPANTS_COLLECTION, participantId)
+  const participantRef = doc(getDb(), PARTICIPANTS_COLLECTION, participantId)
   const participantSnap = await getDoc(participantRef)
 
   if (!participantSnap.exists()) throw new Error('Participant not found')
 
-  const roomRef = doc(db, ROOMS_COLLECTION, roomId)
+  const roomRef = doc(getDb(), ROOMS_COLLECTION, roomId)
   const roomSnap = await getDoc(roomRef)
 
   if (!roomSnap.exists()) throw new Error('Room not found')
@@ -348,7 +397,7 @@ export const assignParticipantToRoom = async (
   }
 
   const oldRoomId = participantSnap.data().roomId
-  const batch = writeBatch(db)
+  const batch = writeBatch(getDb())
 
   // Update participant
   batch.update(participantRef, {
@@ -359,7 +408,7 @@ export const assignParticipantToRoom = async (
 
   // Decrement old room count if exists
   if (oldRoomId) {
-    const oldRoomRef = doc(db, ROOMS_COLLECTION, oldRoomId)
+    const oldRoomRef = doc(getDb(), ROOMS_COLLECTION, oldRoomId)
     batch.update(oldRoomRef, {
       currentOccupancy: increment(-1),
       updatedAt: Timestamp.now()
@@ -382,7 +431,7 @@ export const importParticipantsFromCSV = async (
   let created = 0
   let updated = 0
 
-  const participantsRef = collection(db, PARTICIPANTS_COLLECTION)
+  const participantsRef = collection(getDb(), PARTICIPANTS_COLLECTION)
 
   for (const row of rows) {
     if (!row.name || !row.email) continue
@@ -452,7 +501,7 @@ export const importParticipantsFromCSV = async (
 
       // Update group count
       if (groupId) {
-        const groupRef = doc(db, GROUPS_COLLECTION, groupId)
+        const groupRef = doc(getDb(), GROUPS_COLLECTION, groupId)
         await updateDoc(groupRef, {
           participantCount: increment(1),
           updatedAt: now
@@ -461,7 +510,7 @@ export const importParticipantsFromCSV = async (
 
       // Update room count
       if (roomId) {
-        const roomRef = doc(db, ROOMS_COLLECTION, roomId)
+        const roomRef = doc(getDb(), ROOMS_COLLECTION, roomId)
         await updateDoc(roomRef, {
           currentOccupancy: increment(1),
           updatedAt: now
@@ -499,4 +548,122 @@ export const importParticipantsFromCSV = async (
   return { created, updated }
 }
 
-export { db }
+export const moveParticipantsToRoom = async (
+  participantIds: string[],
+  targetRoomId: string,
+  targetRoomNumber: string
+): Promise<void> => {
+  if (participantIds.length === 0) return
+
+  const roomRef = doc(getDb(), ROOMS_COLLECTION, targetRoomId)
+  const roomSnap = await getDoc(roomRef)
+
+  if (!roomSnap.exists()) throw new Error('Target room not found')
+
+  const roomData = roomSnap.data()
+  const availableSpace = roomData.maxCapacity - roomData.currentOccupancy
+
+  const participantRefs = await Promise.all(
+    participantIds.map(async (id) => {
+      const ref = doc(getDb(), PARTICIPANTS_COLLECTION, id)
+      const snap = await getDoc(ref)
+      return { ref, snap, id }
+    })
+  )
+
+  const validParticipants = participantRefs.filter((p) => p.snap.exists())
+  const movingToNewRoom = validParticipants.filter((p) => p.snap.data()?.roomId !== targetRoomId)
+
+  if (movingToNewRoom.length > availableSpace) {
+    throw new Error(
+      `Room capacity exceeded. Available: ${availableSpace}, Trying to move: ${movingToNewRoom.length}`
+    )
+  }
+
+  const batch = writeBatch(getDb())
+  const roomCountChanges: Record<string, number> = {}
+
+  for (const { ref, snap } of validParticipants) {
+    const data = snap.data()!
+    const oldRoomId = data.roomId
+
+    if (oldRoomId === targetRoomId) continue
+
+    batch.update(ref, {
+      roomId: targetRoomId,
+      roomNumber: targetRoomNumber,
+      updatedAt: Timestamp.now()
+    })
+
+    if (oldRoomId) {
+      roomCountChanges[oldRoomId] = (roomCountChanges[oldRoomId] || 0) - 1
+    }
+    roomCountChanges[targetRoomId] = (roomCountChanges[targetRoomId] || 0) + 1
+  }
+
+  for (const [roomId, change] of Object.entries(roomCountChanges)) {
+    const ref = doc(getDb(), ROOMS_COLLECTION, roomId)
+    batch.update(ref, {
+      currentOccupancy: increment(change),
+      updatedAt: Timestamp.now()
+    })
+  }
+
+  await batch.commit()
+}
+
+export const moveParticipantsToGroup = async (
+  participantIds: string[],
+  targetGroupId: string,
+  targetGroupName: string
+): Promise<void> => {
+  if (participantIds.length === 0) return
+
+  const groupRef = doc(getDb(), GROUPS_COLLECTION, targetGroupId)
+  const groupSnap = await getDoc(groupRef)
+
+  if (!groupSnap.exists()) throw new Error('Target group not found')
+
+  const participantRefs = await Promise.all(
+    participantIds.map(async (id) => {
+      const ref = doc(getDb(), PARTICIPANTS_COLLECTION, id)
+      const snap = await getDoc(ref)
+      return { ref, snap, id }
+    })
+  )
+
+  const validParticipants = participantRefs.filter((p) => p.snap.exists())
+
+  const batch = writeBatch(getDb())
+  const groupCountChanges: Record<string, number> = {}
+
+  for (const { ref, snap } of validParticipants) {
+    const data = snap.data()!
+    const oldGroupId = data.groupId
+
+    if (oldGroupId === targetGroupId) continue
+
+    batch.update(ref, {
+      groupId: targetGroupId,
+      groupName: targetGroupName,
+      updatedAt: Timestamp.now()
+    })
+
+    if (oldGroupId) {
+      groupCountChanges[oldGroupId] = (groupCountChanges[oldGroupId] || 0) - 1
+    }
+    groupCountChanges[targetGroupId] = (groupCountChanges[targetGroupId] || 0) + 1
+  }
+
+  for (const [groupId, change] of Object.entries(groupCountChanges)) {
+    const ref = doc(getDb(), GROUPS_COLLECTION, groupId)
+    batch.update(ref, {
+      participantCount: increment(change),
+      updatedAt: Timestamp.now()
+    })
+  }
+
+  await batch.commit()
+}
+
+export { getDb }

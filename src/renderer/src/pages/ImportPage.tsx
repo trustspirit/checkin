@@ -95,8 +95,9 @@ function ImportPage(): React.ReactElement {
         }
       })
     } catch (err) {
-      setError('Failed to read file')
-      console.error(err)
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      setError(`Failed to read file: ${errorMessage}`)
+      console.error('File read error:', err)
     }
   }
 
