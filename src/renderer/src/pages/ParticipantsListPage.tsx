@@ -24,7 +24,8 @@ import {
   OccupancyBar,
   MoveToModal,
   ExpandArrow,
-  MemberSelectionTable
+  MemberSelectionTable,
+  ParticipantsListSkeleton
 } from '../components'
 
 function ParticipantsListPage(): React.ReactElement {
@@ -49,6 +50,7 @@ function ParticipantsListPage(): React.ReactElement {
   const [displayedParticipants, setDisplayedParticipants] = useState<Participant[]>([])
   const [hasMore, setHasMore] = useState(true)
   const [isSearching, setIsSearching] = useState(false)
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false)
   const pageSize = 100
 
   const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null)
@@ -80,6 +82,7 @@ function ParticipantsListPage(): React.ReactElement {
           setDisplayedParticipants((prev) => [...prev, ...result.data])
         }
         setHasMore(result.hasMore)
+        setHasInitiallyLoaded(true)
       } catch (error) {
         console.error('Failed to load participants:', error)
       } finally {
@@ -212,11 +215,7 @@ function ParticipantsListPage(): React.ReactElement {
   ]
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-16">
-        <div className="w-8 h-8 border-3 border-[#DADDE1] border-t-[#1877F2] rounded-full animate-spin"></div>
-      </div>
-    )
+    return <ParticipantsListSkeleton />
   }
 
   return (
@@ -317,10 +316,10 @@ function ParticipantsListPage(): React.ReactElement {
                 ))}
               </tbody>
             </table>
-            {displayedParticipants.length === 0 && !isSearching && (
+            {displayedParticipants.length === 0 && !isSearching && hasInitiallyLoaded && (
               <div className="text-center py-8 text-[#65676B]">No participants found</div>
             )}
-            {hasMore && (
+            {hasMore && hasInitiallyLoaded && (
               <div ref={loadMoreRef} className="flex justify-center py-4">
                 {isSearching ? (
                   <div className="w-6 h-6 border-2 border-[#DADDE1] border-t-[#1877F2] rounded-full animate-spin" />
@@ -430,7 +429,7 @@ function ParticipantsListPage(): React.ReactElement {
                 })}
               </tbody>
             </table>
-            {groups.length === 0 && (
+            {groups.length === 0 && !isLoading && (
               <div className="text-center py-8 text-[#65676B]">No groups created yet</div>
             )}
           </div>
@@ -542,7 +541,7 @@ function ParticipantsListPage(): React.ReactElement {
                 })}
               </tbody>
             </table>
-            {rooms.length === 0 && (
+            {rooms.length === 0 && !isLoading && (
               <div className="text-center py-8 text-[#65676B]">No rooms created yet</div>
             )}
           </div>

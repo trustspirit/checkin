@@ -3,6 +3,7 @@ import { readAuditLogs, clearAuditLogs, AuditLogEntry } from '../services/auditL
 import { useSetAtom } from 'jotai'
 import { addToastAtom } from '../stores/toastStore'
 import { AuditAction, TargetType, AUDIT_ACTION_LABELS, TARGET_TYPE_LABELS } from '../types'
+import { AuditLogSkeleton } from '../components'
 
 function AuditLogPage(): React.ReactElement {
   const [logs, setLogs] = useState<AuditLogEntry[]>([])
@@ -55,11 +56,7 @@ function AuditLogPage(): React.ReactElement {
   const filteredLogs = filter === 'all' ? logs : logs.filter((log) => log.targetType === filter)
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-16">
-        <div className="w-8 h-8 border-3 border-[#DADDE1] border-t-[#1877F2] rounded-full animate-spin"></div>
-      </div>
-    )
+    return <AuditLogSkeleton />
   }
 
   return (

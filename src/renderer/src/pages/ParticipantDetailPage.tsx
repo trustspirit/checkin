@@ -17,6 +17,7 @@ import type { Participant, Group, Room, CheckInRecord } from '../types'
 import { addToastAtom } from '../stores/toastStore'
 import { userNameAtom } from '../stores/userStore'
 import { writeAuditLog } from '../services/auditLog'
+import { DetailPageSkeleton } from '../components'
 
 interface EditFormData {
   name: string
@@ -321,11 +322,7 @@ function ParticipantDetailPage(): React.ReactElement {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-16">
-        <div className="w-8 h-8 border-3 border-[#DADDE1] border-t-[#1877F2] rounded-full animate-spin"></div>
-      </div>
-    )
+    return <DetailPageSkeleton type="participant" />
   }
 
   if (!participant) {

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { searchParticipants } from '../services/firebase'
 import type { Participant } from '../types'
+import { SearchResultsSkeleton } from '../components'
 
 function HomePage(): React.ReactElement {
   const [searchTerm, setSearchTerm] = useState('')
@@ -144,9 +145,7 @@ function HomePage(): React.ReactElement {
             className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg mt-2 max-h-96 overflow-y-auto z-50 border border-[#DADDE1]"
           >
             {isLoading ? (
-              <div className="flex justify-center items-center py-8">
-                <div className="w-8 h-8 border-3 border-[#DADDE1] border-t-[#1877F2] rounded-full animate-spin"></div>
-              </div>
+              <SearchResultsSkeleton count={3} />
             ) : results.length > 0 ? (
               results.map((participant, index) => (
                 <div
