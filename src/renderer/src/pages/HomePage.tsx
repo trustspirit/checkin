@@ -102,46 +102,66 @@ function HomePage(): React.ReactElement {
   return (
     <div className="max-w-xl mx-auto pt-16">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-slate-800 mb-2">Participant Check-In</h1>
-        <p className="text-slate-500">Search by name, email, or phone number</p>
+        <h1 className="text-3xl font-bold text-[#050505] mb-2 tracking-tight">
+          Participant Check-In
+        </h1>
+        <p className="text-[#65676B]">Search by name, email, or phone number</p>
       </div>
 
       <div className="relative">
-        <input
-          ref={searchInputRef}
-          type="text"
-          className="w-full px-5 py-4 text-lg border-2 border-slate-200 rounded-xl outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-          placeholder="Start typing to search..."
-          value={searchTerm}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onFocus={handleInputFocus}
-        />
+        <div className="relative">
+          <input
+            ref={searchInputRef}
+            type="text"
+            className="w-full px-5 py-3 text-lg border-none rounded-full outline-none transition-all shadow-sm bg-white focus:ring-2 focus:ring-[#1877F2]"
+            placeholder="Start typing to search..."
+            value={searchTerm}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onFocus={handleInputFocus}
+          />
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[#65676B]">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="w-5 h-5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+              />
+            </svg>
+          </div>
+        </div>
 
         {showResults && (searchTerm.trim() || isLoading) && (
           <div
             ref={resultsRef}
-            className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg mt-2 max-h-96 overflow-y-auto z-50"
+            className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg mt-2 max-h-96 overflow-y-auto z-50 border border-[#DADDE1]"
           >
             {isLoading ? (
               <div className="flex justify-center items-center py-8">
-                <div className="w-10 h-10 border-3 border-slate-200 border-t-blue-500 rounded-full animate-spin"></div>
+                <div className="w-8 h-8 border-3 border-[#DADDE1] border-t-[#1877F2] rounded-full animate-spin"></div>
               </div>
             ) : results.length > 0 ? (
               results.map((participant, index) => (
                 <div
                   key={participant.id}
-                  className={`px-5 py-4 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors ${
-                    index === selectedIndex ? 'bg-slate-100' : 'hover:bg-slate-50'
+                  className={`px-4 py-3 cursor-pointer border-b border-[#F0F2F5] last:border-b-0 transition-colors ${
+                    index === selectedIndex ? 'bg-[#F0F2F5]' : 'hover:bg-[#F0F2F5]'
                   }`}
                   onClick={() => handleResultClick(participant)}
                   onMouseEnter={() => setSelectedIndex(index)}
                 >
-                  <div className="font-semibold text-slate-800">{participant.name}</div>
-                  <div className="text-sm text-slate-500 mt-1">
+                  <div className="font-semibold text-[#050505]">{participant.name}</div>
+                  <div className="text-sm text-[#65676B] mt-1">
                     {participant.email} {participant.phoneNumber && `| ${participant.phoneNumber}`}
                   </div>
-                  <div className="text-sm text-slate-500">
+                  <div className="text-sm text-[#65676B]">
                     {participant.ward && `${participant.ward}`}
                     {participant.stake && `, ${participant.stake}`}
                   </div>
@@ -149,7 +169,7 @@ function HomePage(): React.ReactElement {
               ))
             ) : (
               <div className="px-5 py-4">
-                <div className="text-slate-500">No participants found</div>
+                <div className="text-[#65676B] text-center">No participants found</div>
               </div>
             )}
           </div>

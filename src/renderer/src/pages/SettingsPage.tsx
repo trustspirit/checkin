@@ -75,7 +75,7 @@ function SettingsPage(): React.ReactElement {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-16">
-        <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-3 border-[#DADDE1] border-t-[#1877F2] rounded-full animate-spin"></div>
       </div>
     )
   }
@@ -83,29 +83,29 @@ function SettingsPage(): React.ReactElement {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 mb-2">Settings</h1>
-        <p className="text-slate-500">Configure your Firebase database connection</p>
+        <h1 className="text-2xl font-bold text-[#050505] mb-2">Settings</h1>
+        <p className="text-[#65676B]">Configure your Firebase database connection</p>
       </div>
 
       {message && (
         <div
-          className={`mb-6 p-4 rounded-lg ${
+          className={`mb-6 p-4 rounded-md border ${
             message.type === 'success'
-              ? 'bg-green-50 border border-green-200 text-green-700'
-              : 'bg-red-50 border border-red-200 text-red-700'
+              ? 'bg-[#EFFFF6] border-[#31A24C] text-[#31A24C]'
+              : 'bg-[#FFEBEE] border-[#FA383E] text-[#FA383E]'
           }`}
         >
           {message.text}
         </div>
       )}
 
-      <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-slate-800 mb-4">Firebase Configuration</h2>
+      <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm p-6">
+        <h2 className="text-lg font-bold text-[#050505] mb-4">Firebase Configuration</h2>
 
         {isConfigured ? (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+            <div className="flex items-center gap-3 p-4 bg-[#EFFFF6] border border-[#31A24C]/30 rounded-md">
+              <div className="w-8 h-8 bg-[#31A24C] rounded-full flex items-center justify-center">
                 <svg
                   className="w-5 h-5 text-white"
                   fill="none"
@@ -121,8 +121,8 @@ function SettingsPage(): React.ReactElement {
                 </svg>
               </div>
               <div className="flex-1">
-                <p className="font-medium text-green-800">Connected</p>
-                <p className="text-sm text-green-600 truncate" title={configPath || ''}>
+                <p className="font-semibold text-[#31A24C]">Connected</p>
+                <p className="text-sm text-[#31A24C]/80 truncate" title={configPath || ''}>
                   {configPath}
                 </p>
               </div>
@@ -131,13 +131,13 @@ function SettingsPage(): React.ReactElement {
             <div className="flex gap-3">
               <button
                 onClick={handleImport}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-[#1877F2] text-white rounded-md font-semibold hover:bg-[#166FE5] shadow-sm transition-all"
               >
                 Change Configuration
               </button>
               <button
                 onClick={handleClearConfig}
-                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
+                className="px-4 py-2 bg-[#E4E6EB] text-[#050505] rounded-md font-semibold hover:bg-[#D8DADF] transition-colors"
               >
                 Clear Configuration
               </button>
@@ -145,8 +145,8 @@ function SettingsPage(): React.ReactElement {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center">
+            <div className="flex items-center gap-3 p-4 bg-[#FFF8E1] border border-[#FFECB3] rounded-md">
+              <div className="w-8 h-8 bg-[#FFC107] rounded-full flex items-center justify-center">
                 <svg
                   className="w-5 h-5 text-white"
                   fill="none"
@@ -162,8 +162,8 @@ function SettingsPage(): React.ReactElement {
                 </svg>
               </div>
               <div>
-                <p className="font-medium text-amber-800">Not Configured</p>
-                <p className="text-sm text-amber-600">
+                <p className="font-semibold text-[#FFA000]">Not Configured</p>
+                <p className="text-sm text-[#FFB300]">
                   Please import a Firebase configuration JSON file
                 </p>
               </div>
@@ -171,7 +171,7 @@ function SettingsPage(): React.ReactElement {
 
             <button
               onClick={handleImport}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="px-6 py-3 bg-[#1877F2] text-white rounded-md font-semibold hover:bg-[#166FE5] shadow-sm transition-all flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
@@ -187,9 +187,9 @@ function SettingsPage(): React.ReactElement {
         )}
       </div>
 
-      <div className="mt-6 bg-slate-50 rounded-lg p-6">
-        <h3 className="font-semibold text-slate-800 mb-3">How to get Firebase credentials</h3>
-        <ol className="text-sm text-slate-600 space-y-2 list-decimal list-inside">
+      <div className="mt-6 bg-white rounded-lg p-6 border border-[#DADDE1] shadow-sm">
+        <h3 className="font-bold text-[#050505] mb-3">How to get Firebase credentials</h3>
+        <ol className="text-sm text-[#65676B] space-y-2 list-decimal list-inside">
           <li>Go to the Firebase Console (console.firebase.google.com)</li>
           <li>Select your project (or create a new one)</li>
           <li>Click the gear icon → Project settings</li>
@@ -198,9 +198,9 @@ function SettingsPage(): React.ReactElement {
           <li>Download or copy the config as a JSON file</li>
         </ol>
 
-        <div className="mt-4 p-4 bg-white border border-slate-200 rounded-lg">
-          <p className="text-xs font-medium text-slate-500 mb-2">Example JSON format:</p>
-          <pre className="text-xs text-slate-600 overflow-x-auto">
+        <div className="mt-4 p-4 bg-[#F0F2F5] border border-[#DADDE1] rounded-md">
+          <p className="text-xs font-semibold text-[#65676B] mb-2">Example JSON format:</p>
+          <pre className="text-xs text-[#65676B] overflow-x-auto">
             {`{
   "apiKey": "AIzaSy...",
   "authDomain": "your-project.firebaseapp.com",

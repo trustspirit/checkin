@@ -149,7 +149,7 @@ function ParticipantsListPage(): React.ReactElement {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-16">
-        <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-3 border-[#DADDE1] border-t-[#1877F2] rounded-full animate-spin"></div>
       </div>
     )
   }
@@ -157,37 +157,37 @@ function ParticipantsListPage(): React.ReactElement {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 mb-2">All Data</h1>
-        <p className="text-slate-500">View all participants, groups, and rooms</p>
+        <h1 className="text-2xl font-bold text-[#050505] mb-1">All Data</h1>
+        <p className="text-[#65676B]">View all participants, groups, and rooms</p>
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex border-b border-[#DADDE1] mb-6">
         <button
           onClick={() => setActiveTab('participants')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`relative px-4 py-3 font-medium text-[15px] transition-colors ${
             activeTab === 'participants'
-              ? 'bg-blue-600 text-white'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              ? 'text-[#1877F2] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm'
+              : 'text-[#65676B] hover:bg-[#F2F2F2] rounded-t-lg'
           }`}
         >
           Participants ({participants.length})
         </button>
         <button
           onClick={() => setActiveTab('groups')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`relative px-4 py-3 font-medium text-[15px] transition-colors ${
             activeTab === 'groups'
-              ? 'bg-blue-600 text-white'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              ? 'text-[#1877F2] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm'
+              : 'text-[#65676B] hover:bg-[#F2F2F2] rounded-t-lg'
           }`}
         >
           Groups ({groups.length})
         </button>
         <button
           onClick={() => setActiveTab('rooms')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`relative px-4 py-3 font-medium text-[15px] transition-colors ${
             activeTab === 'rooms'
-              ? 'bg-blue-600 text-white'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              ? 'text-[#1877F2] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm'
+              : 'text-[#65676B] hover:bg-[#F2F2F2] rounded-t-lg'
           }`}
         >
           Rooms ({rooms.length})
@@ -195,33 +195,39 @@ function ParticipantsListPage(): React.ReactElement {
       </div>
 
       {activeTab === 'participants' && (
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
-          <div className="p-4 border-b border-slate-200">
+        <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm">
+          <div className="p-4 border-b border-[#DADDE1]">
             <input
               type="text"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               placeholder="Filter participants..."
-              className="w-full md:w-80 px-4 py-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+              className="w-full md:w-80 px-4 py-2 bg-[#F0F2F5] border-none rounded-full outline-none focus:ring-2 focus:ring-[#1877F2] placeholder-[#65676B]"
             />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-slate-50">
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Name</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                <tr className="bg-[#F0F2F5] border-b border-[#DADDE1]">
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
+                    Name
+                  </th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
                     Email
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
                     Phone
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Ward</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
+                    Ward
+                  </th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
                     Group
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Room</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
+                    Room
+                  </th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
                     Status
                   </th>
                 </tr>
@@ -231,37 +237,37 @@ function ParticipantsListPage(): React.ReactElement {
                   <tr
                     key={participant.id}
                     onClick={() => navigate(`/participant/${participant.id}`)}
-                    className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer"
+                    className="border-b border-[#DADDE1] last:border-0 hover:bg-[#F0F2F5] cursor-pointer transition-colors"
                   >
-                    <td className="px-4 py-3 font-medium text-slate-800">{participant.name}</td>
-                    <td className="px-4 py-3 text-slate-600">{participant.email}</td>
-                    <td className="px-4 py-3 text-slate-600">{participant.phoneNumber || '-'}</td>
-                    <td className="px-4 py-3 text-slate-600">{participant.ward || '-'}</td>
+                    <td className="px-4 py-3 font-semibold text-[#050505]">{participant.name}</td>
+                    <td className="px-4 py-3 text-[#65676B]">{participant.email}</td>
+                    <td className="px-4 py-3 text-[#65676B]">{participant.phoneNumber || '-'}</td>
+                    <td className="px-4 py-3 text-[#65676B]">{participant.ward || '-'}</td>
                     <td className="px-4 py-3">
                       {participant.groupName ? (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
+                        <span className="px-2 py-1 bg-[#E7F3FF] text-[#1877F2] rounded-md text-sm font-semibold">
                           {participant.groupName}
                         </span>
                       ) : (
-                        <span className="text-slate-400">-</span>
+                        <span className="text-gray-300">-</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       {participant.roomNumber ? (
-                        <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm">
+                        <span className="px-2 py-1 bg-[#F0F2F5] text-[#65676B] rounded-md text-sm font-semibold">
                           {participant.roomNumber}
                         </span>
                       ) : (
-                        <span className="text-slate-400">-</span>
+                        <span className="text-gray-300">-</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       {getCheckInStatus(participant) === 'checked-in' ? (
-                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                        <span className="px-2 py-1 bg-[#EFFFF6] text-[#31A24C] rounded-md text-xs font-semibold">
                           Checked In
                         </span>
                       ) : (
-                        <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-medium">
+                        <span className="px-2 py-1 bg-[#F0F2F5] text-[#65676B] rounded-md text-xs font-semibold">
                           Not Checked In
                         </span>
                       )}
@@ -271,26 +277,26 @@ function ParticipantsListPage(): React.ReactElement {
               </tbody>
             </table>
             {filteredParticipants.length === 0 && (
-              <div className="text-center py-8 text-slate-500">No participants found</div>
+              <div className="text-center py-8 text-[#65676B]">No participants found</div>
             )}
           </div>
         </div>
       )}
 
       {activeTab === 'groups' && (
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
+        <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-slate-50">
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600 w-8"></th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                <tr className="bg-[#F0F2F5] border-b border-[#DADDE1]">
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-[#65676B] w-8"></th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
                     Group Name
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
                     Members
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
                     Created
                   </th>
                 </tr>
@@ -303,22 +309,22 @@ function ParticipantsListPage(): React.ReactElement {
                     <React.Fragment key={group.id}>
                       <tr
                         onClick={() => toggleGroupExpand(group.id)}
-                        className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer"
+                        className="border-b border-[#DADDE1] last:border-0 hover:bg-[#F0F2F5] cursor-pointer transition-colors"
                       >
-                        <td className="px-4 py-3 text-slate-400">
+                        <td className="px-4 py-3 text-[#65676B]">
                           <span
                             className={`inline-block transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                           >
                             ▶
                           </span>
                         </td>
-                        <td className="px-4 py-3 font-medium text-slate-800">{group.name}</td>
+                        <td className="px-4 py-3 font-semibold text-[#050505]">{group.name}</td>
                         <td className="px-4 py-3">
-                          <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                          <span className="px-3 py-1 bg-[#E7F3FF] text-[#1877F2] rounded-full text-sm font-medium">
                             {group.participantCount} members
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-slate-600">
+                        <td className="px-4 py-3 text-[#65676B]">
                           {new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(
                             group.createdAt
                           )}
@@ -326,12 +332,15 @@ function ParticipantsListPage(): React.ReactElement {
                       </tr>
                       {isExpanded && (
                         <tr>
-                          <td colSpan={4} className="bg-slate-50 px-4 py-2">
+                          <td
+                            colSpan={4}
+                            className="bg-[#F0F2F5] px-4 py-2 border-b border-[#DADDE1]"
+                          >
                             {members.length > 0 ? (
-                              <div className="ml-6 border-l-2 border-blue-200 pl-4">
+                              <div className="ml-6 border-l-2 border-[#1877F2]/30 pl-4">
                                 {selectedGroupMembers.size > 0 && (
                                   <div className="mb-3 flex items-center gap-3">
-                                    <span className="text-sm text-slate-600">
+                                    <span className="text-sm text-[#65676B]">
                                       {selectedGroupMembers.size} selected
                                     </span>
                                     <button
@@ -340,7 +349,7 @@ function ParticipantsListPage(): React.ReactElement {
                                         setMoveError(null)
                                         setShowMoveToGroupModal(true)
                                       }}
-                                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                                      className="px-3 py-1 bg-[#1877F2] text-white text-sm rounded-md hover:bg-[#166FE5] font-semibold shadow-sm"
                                     >
                                       Move to Another Group
                                     </button>
@@ -349,7 +358,7 @@ function ParticipantsListPage(): React.ReactElement {
                                         e.stopPropagation()
                                         setSelectedGroupMembers(new Set())
                                       }}
-                                      className="px-3 py-1 bg-slate-200 text-slate-700 text-sm rounded-lg hover:bg-slate-300"
+                                      className="px-3 py-1 bg-[#E4E6EB] text-[#050505] text-sm rounded-md hover:bg-[#D8DADF] font-semibold"
                                     >
                                       Clear Selection
                                     </button>
@@ -357,7 +366,7 @@ function ParticipantsListPage(): React.ReactElement {
                                 )}
                                 <table className="w-full">
                                   <thead>
-                                    <tr className="text-xs text-slate-500">
+                                    <tr className="text-xs text-[#65676B]">
                                       <th className="py-2 text-left font-medium w-8">
                                         <input
                                           type="checkbox"
@@ -378,7 +387,7 @@ function ParticipantsListPage(): React.ReactElement {
                                             }
                                           }}
                                           onClick={(e) => e.stopPropagation()}
-                                          className="w-4 h-4 rounded border-slate-300"
+                                          className="w-4 h-4 rounded border-[#DADDE1] text-[#1877F2] focus:ring-[#1877F2]"
                                         />
                                       </th>
                                       <th className="py-2 text-left font-medium">Name</th>
@@ -391,8 +400,10 @@ function ParticipantsListPage(): React.ReactElement {
                                     {members.map((member) => (
                                       <tr
                                         key={member.id}
-                                        className={`hover:bg-blue-50 cursor-pointer ${
-                                          selectedGroupMembers.has(member.id) ? 'bg-blue-50' : ''
+                                        className={`hover:bg-[#E7F3FF]/50 cursor-pointer ${
+                                          selectedGroupMembers.has(member.id)
+                                            ? 'bg-[#E7F3FF]/50'
+                                            : ''
                                         }`}
                                       >
                                         <td className="py-2">
@@ -401,11 +412,11 @@ function ParticipantsListPage(): React.ReactElement {
                                             checked={selectedGroupMembers.has(member.id)}
                                             onChange={() => toggleGroupMemberSelection(member.id)}
                                             onClick={(e) => e.stopPropagation()}
-                                            className="w-4 h-4 rounded border-slate-300"
+                                            className="w-4 h-4 rounded border-[#DADDE1] text-[#1877F2] focus:ring-[#1877F2]"
                                           />
                                         </td>
                                         <td
-                                          className="py-2 text-sm font-medium text-slate-800"
+                                          className="py-2 text-sm font-semibold text-[#050505]"
                                           onClick={(e) => {
                                             e.stopPropagation()
                                             navigate(`/participant/${member.id}`)
@@ -413,19 +424,19 @@ function ParticipantsListPage(): React.ReactElement {
                                         >
                                           {member.name}
                                         </td>
-                                        <td className="py-2 text-sm text-slate-600">
+                                        <td className="py-2 text-sm text-[#65676B]">
                                           {member.email}
                                         </td>
-                                        <td className="py-2 text-sm text-slate-600">
+                                        <td className="py-2 text-sm text-[#65676B]">
                                           {member.phoneNumber || '-'}
                                         </td>
                                         <td className="py-2">
                                           {getCheckInStatus(member) === 'checked-in' ? (
-                                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                            <span className="px-2 py-1 bg-[#EFFFF6] text-[#31A24C] rounded-md text-xs font-semibold">
                                               Checked In
                                             </span>
                                           ) : (
-                                            <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-medium">
+                                            <span className="px-2 py-1 bg-[#F0F2F5] text-[#65676B] rounded-md text-xs font-semibold">
                                               Not Checked In
                                             </span>
                                           )}
@@ -436,7 +447,7 @@ function ParticipantsListPage(): React.ReactElement {
                                 </table>
                               </div>
                             ) : (
-                              <div className="ml-6 py-2 text-sm text-slate-500">
+                              <div className="ml-6 py-2 text-sm text-[#65676B]">
                                 No members in this group
                               </div>
                             )}
@@ -449,29 +460,29 @@ function ParticipantsListPage(): React.ReactElement {
               </tbody>
             </table>
             {groups.length === 0 && (
-              <div className="text-center py-8 text-slate-500">No groups created yet</div>
+              <div className="text-center py-8 text-[#65676B]">No groups created yet</div>
             )}
           </div>
         </div>
       )}
 
       {activeTab === 'rooms' && (
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
+        <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-slate-50">
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600 w-8"></th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                <tr className="bg-[#F0F2F5] border-b border-[#DADDE1]">
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-[#65676B] w-8"></th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
                     Room Number
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
                     Occupancy
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
                     Created
                   </th>
                 </tr>
@@ -486,49 +497,49 @@ function ParticipantsListPage(): React.ReactElement {
                     <React.Fragment key={room.id}>
                       <tr
                         onClick={() => toggleRoomExpand(room.id)}
-                        className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer"
+                        className="border-b border-[#DADDE1] last:border-0 hover:bg-[#F0F2F5] cursor-pointer transition-colors"
                       >
-                        <td className="px-4 py-3 text-slate-400">
+                        <td className="px-4 py-3 text-[#65676B]">
                           <span
                             className={`inline-block transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                           >
                             ▶
                           </span>
                         </td>
-                        <td className="px-4 py-3 font-medium text-slate-800">
+                        <td className="px-4 py-3 font-semibold text-[#050505]">
                           Room {room.roomNumber}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
+                            <div className="w-32 h-2 bg-[#F0F2F5] rounded-full overflow-hidden">
                               <div
                                 className={`h-full rounded-full ${
                                   isFull
-                                    ? 'bg-red-500'
+                                    ? 'bg-[#FA383E]'
                                     : occupancyPercent > 75
                                       ? 'bg-yellow-500'
-                                      : 'bg-green-500'
+                                      : 'bg-[#31A24C]'
                                 }`}
                                 style={{ width: `${occupancyPercent}%` }}
                               />
                             </div>
-                            <span className="text-sm text-slate-600">
+                            <span className="text-sm text-[#65676B]">
                               {room.currentOccupancy} / {room.maxCapacity}
                             </span>
                           </div>
                         </td>
                         <td className="px-4 py-3">
                           {isFull ? (
-                            <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                            <span className="px-2 py-1 bg-[#FFEBEE] text-[#FA383E] rounded-md text-xs font-semibold">
                               Full
                             </span>
                           ) : (
-                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                            <span className="px-2 py-1 bg-[#EFFFF6] text-[#31A24C] rounded-md text-xs font-semibold">
                               Available
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-slate-600">
+                        <td className="px-4 py-3 text-[#65676B]">
                           {new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(
                             room.createdAt
                           )}
@@ -536,12 +547,15 @@ function ParticipantsListPage(): React.ReactElement {
                       </tr>
                       {isExpanded && (
                         <tr>
-                          <td colSpan={5} className="bg-slate-50 px-4 py-2">
+                          <td
+                            colSpan={5}
+                            className="bg-[#F0F2F5] px-4 py-2 border-b border-[#DADDE1]"
+                          >
                             {members.length > 0 ? (
-                              <div className="ml-6 border-l-2 border-purple-200 pl-4">
+                              <div className="ml-6 border-l-2 border-[#1877F2]/30 pl-4">
                                 {selectedRoomMembers.size > 0 && (
                                   <div className="mb-3 flex items-center gap-3">
-                                    <span className="text-sm text-slate-600">
+                                    <span className="text-sm text-[#65676B]">
                                       {selectedRoomMembers.size} selected
                                     </span>
                                     <button
@@ -550,7 +564,7 @@ function ParticipantsListPage(): React.ReactElement {
                                         setMoveError(null)
                                         setShowMoveToRoomModal(true)
                                       }}
-                                      className="px-3 py-1 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700"
+                                      className="px-3 py-1 bg-[#1877F2] text-white text-sm rounded-md hover:bg-[#166FE5] font-semibold shadow-sm"
                                     >
                                       Move to Another Room
                                     </button>
@@ -559,7 +573,7 @@ function ParticipantsListPage(): React.ReactElement {
                                         e.stopPropagation()
                                         setSelectedRoomMembers(new Set())
                                       }}
-                                      className="px-3 py-1 bg-slate-200 text-slate-700 text-sm rounded-lg hover:bg-slate-300"
+                                      className="px-3 py-1 bg-[#E4E6EB] text-[#050505] text-sm rounded-md hover:bg-[#D8DADF] font-semibold"
                                     >
                                       Clear Selection
                                     </button>
@@ -567,7 +581,7 @@ function ParticipantsListPage(): React.ReactElement {
                                 )}
                                 <table className="w-full">
                                   <thead>
-                                    <tr className="text-xs text-slate-500">
+                                    <tr className="text-xs text-[#65676B]">
                                       <th className="py-2 text-left font-medium w-8">
                                         <input
                                           type="checkbox"
@@ -588,7 +602,7 @@ function ParticipantsListPage(): React.ReactElement {
                                             }
                                           }}
                                           onClick={(e) => e.stopPropagation()}
-                                          className="w-4 h-4 rounded border-slate-300"
+                                          className="w-4 h-4 rounded border-[#DADDE1] text-[#1877F2] focus:ring-[#1877F2]"
                                         />
                                       </th>
                                       <th className="py-2 text-left font-medium">Name</th>
@@ -601,8 +615,8 @@ function ParticipantsListPage(): React.ReactElement {
                                     {members.map((member) => (
                                       <tr
                                         key={member.id}
-                                        className={`hover:bg-purple-50 cursor-pointer ${
-                                          selectedRoomMembers.has(member.id) ? 'bg-purple-50' : ''
+                                        className={`hover:bg-[#E7F3FF]/50 cursor-pointer ${
+                                          selectedRoomMembers.has(member.id) ? 'bg-[#E7F3FF]' : ''
                                         }`}
                                       >
                                         <td className="py-2">
@@ -611,11 +625,11 @@ function ParticipantsListPage(): React.ReactElement {
                                             checked={selectedRoomMembers.has(member.id)}
                                             onChange={() => toggleRoomMemberSelection(member.id)}
                                             onClick={(e) => e.stopPropagation()}
-                                            className="w-4 h-4 rounded border-slate-300"
+                                            className="w-4 h-4 rounded border-[#DADDE1] text-[#1877F2] focus:ring-[#1877F2]"
                                           />
                                         </td>
                                         <td
-                                          className="py-2 text-sm font-medium text-slate-800"
+                                          className="py-2 text-sm font-semibold text-[#050505]"
                                           onClick={(e) => {
                                             e.stopPropagation()
                                             navigate(`/participant/${member.id}`)
@@ -623,19 +637,19 @@ function ParticipantsListPage(): React.ReactElement {
                                         >
                                           {member.name}
                                         </td>
-                                        <td className="py-2 text-sm text-slate-600">
+                                        <td className="py-2 text-sm text-[#65676B]">
                                           {member.email}
                                         </td>
-                                        <td className="py-2 text-sm text-slate-600">
+                                        <td className="py-2 text-sm text-[#65676B]">
                                           {member.phoneNumber || '-'}
                                         </td>
                                         <td className="py-2">
                                           {getCheckInStatus(member) === 'checked-in' ? (
-                                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                            <span className="px-2 py-1 bg-[#EFFFF6] text-[#31A24C] rounded-md text-xs font-semibold">
                                               Checked In
                                             </span>
                                           ) : (
-                                            <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-medium">
+                                            <span className="px-2 py-1 bg-[#F0F2F5] text-[#65676B] rounded-md text-xs font-semibold">
                                               Not Checked In
                                             </span>
                                           )}
@@ -646,7 +660,7 @@ function ParticipantsListPage(): React.ReactElement {
                                 </table>
                               </div>
                             ) : (
-                              <div className="ml-6 py-2 text-sm text-slate-500">
+                              <div className="ml-6 py-2 text-sm text-[#65676B]">
                                 No one assigned to this room
                               </div>
                             )}
@@ -659,26 +673,26 @@ function ParticipantsListPage(): React.ReactElement {
               </tbody>
             </table>
             {rooms.length === 0 && (
-              <div className="text-center py-8 text-slate-500">No rooms created yet</div>
+              <div className="text-center py-8 text-[#65676B]">No rooms created yet</div>
             )}
           </div>
         </div>
       )}
 
       {showMoveToRoomModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
-            <h3 className="text-lg font-semibold text-slate-800 mb-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6 border border-[#DADDE1]">
+            <h3 className="text-xl font-bold text-[#050505] mb-4">
               Move {selectedRoomMembers.size} participant(s) to another room
             </h3>
 
             {moveError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+              <div className="mb-4 p-3 bg-[#FFEBEE] border border-[#FFCDD2] text-[#FA383E] rounded-md text-sm">
                 {moveError}
               </div>
             )}
 
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
               {rooms
                 .filter((r) => r.id !== expandedRoomId)
                 .map((room) => {
@@ -689,15 +703,15 @@ function ParticipantsListPage(): React.ReactElement {
                       key={room.id}
                       onClick={() => handleMoveToRoom(room)}
                       disabled={!canFit || isMoving}
-                      className={`w-full p-3 rounded-lg border text-left transition-colors ${
+                      className={`w-full p-3 rounded-lg border text-left transition-all ${
                         canFit
-                          ? 'border-slate-200 hover:border-purple-500 hover:bg-purple-50'
-                          : 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
+                          ? 'border-[#DADDE1] hover:bg-[#F0F2F5]'
+                          : 'border-gray-100 bg-[#F0F2F5] opacity-50 cursor-not-allowed'
                       }`}
                     >
                       <div className="flex justify-between items-center">
-                        <span className="font-medium text-slate-800">Room {room.roomNumber}</span>
-                        <span className={`text-sm ${canFit ? 'text-green-600' : 'text-red-600'}`}>
+                        <span className="font-semibold text-[#050505]">Room {room.roomNumber}</span>
+                        <span className={`text-sm ${canFit ? 'text-[#31A24C]' : 'text-[#FA383E]'}`}>
                           {available} available
                         </span>
                       </div>
@@ -710,7 +724,7 @@ function ParticipantsListPage(): React.ReactElement {
               <button
                 onClick={() => setShowMoveToRoomModal(false)}
                 disabled={isMoving}
-                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
+                className="px-4 py-2 bg-[#E4E6EB] text-[#050505] rounded-md hover:bg-[#D8DADF] font-semibold"
               >
                 Cancel
               </button>
@@ -720,19 +734,19 @@ function ParticipantsListPage(): React.ReactElement {
       )}
 
       {showMoveToGroupModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
-            <h3 className="text-lg font-semibold text-slate-800 mb-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6 border border-[#DADDE1]">
+            <h3 className="text-xl font-bold text-[#050505] mb-4">
               Move {selectedGroupMembers.size} participant(s) to another group
             </h3>
 
             {moveError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+              <div className="mb-4 p-3 bg-[#FFEBEE] border border-[#FFCDD2] text-[#FA383E] rounded-md text-sm">
                 {moveError}
               </div>
             )}
 
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
               {groups
                 .filter((g) => g.id !== expandedGroupId)
                 .map((group) => (
@@ -740,11 +754,11 @@ function ParticipantsListPage(): React.ReactElement {
                     key={group.id}
                     onClick={() => handleMoveToGroup(group)}
                     disabled={isMoving}
-                    className="w-full p-3 rounded-lg border border-slate-200 text-left hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                    className="w-full p-3 rounded-lg border border-[#DADDE1] text-left hover:bg-[#F0F2F5] transition-all"
                   >
                     <div className="flex justify-between items-center">
-                      <span className="font-medium text-slate-800">{group.name}</span>
-                      <span className="text-sm text-slate-500">
+                      <span className="font-semibold text-[#050505]">{group.name}</span>
+                      <span className="text-sm text-[#65676B]">
                         {group.participantCount} members
                       </span>
                     </div>
@@ -756,7 +770,7 @@ function ParticipantsListPage(): React.ReactElement {
               <button
                 onClick={() => setShowMoveToGroupModal(false)}
                 disabled={isMoving}
-                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
+                className="px-4 py-2 bg-[#E4E6EB] text-[#050505] rounded-md hover:bg-[#D8DADF] font-semibold"
               >
                 Cancel
               </button>

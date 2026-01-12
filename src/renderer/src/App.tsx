@@ -1,29 +1,35 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import HomePage from './pages/HomePage'
 import ParticipantDetailPage from './pages/ParticipantDetailPage'
 import ParticipantsListPage from './pages/ParticipantsListPage'
 import ImportPage from './pages/ImportPage'
 import SettingsPage from './pages/SettingsPage'
+import AddParticipantModal from './components/AddParticipantModal'
 
 function App(): React.ReactElement {
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
-      <nav className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-8">
-          <NavLink to="/" className="text-xl font-bold text-blue-600">
-            Check-In
+    <div className="min-h-screen flex flex-col bg-[#F0F2F5]">
+      <nav className="bg-white shadow-sm px-4 h-14 flex items-center justify-between sticky top-0 z-50">
+        <div className="flex items-center gap-4">
+          <NavLink
+            to="/"
+            className="text-[28px] font-bold text-[#1877F2] tracking-tighter ml-2 hover:opacity-90 transition-opacity"
+          >
+            checkin
           </NavLink>
-          <div className="flex gap-2">
+          <div className="flex h-14 ml-4">
             <NavLink
               to="/"
               end
               className={({ isActive }) =>
-                `px-4 py-2 rounded-md font-medium transition-colors ${
+                `relative px-4 flex items-center font-medium text-[15px] transition-colors duration-200 ${
                   isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'text-slate-600 hover:bg-blue-600 hover:text-white'
-                }`
+                    ? 'text-[#1877F2]'
+                    : 'text-[#65676B] hover:bg-[#F2F2F2] rounded-lg mx-0.5'
+                } ${isActive ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm' : ''}`
               }
             >
               Search
@@ -31,11 +37,11 @@ function App(): React.ReactElement {
             <NavLink
               to="/participants"
               className={({ isActive }) =>
-                `px-4 py-2 rounded-md font-medium transition-colors ${
+                `relative px-4 flex items-center font-medium text-[15px] transition-colors duration-200 ${
                   isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'text-slate-600 hover:bg-blue-600 hover:text-white'
-                }`
+                    ? 'text-[#1877F2]'
+                    : 'text-[#65676B] hover:bg-[#F2F2F2] rounded-lg mx-0.5'
+                } ${isActive ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm' : ''}`
               }
             >
               All Participants
@@ -43,11 +49,11 @@ function App(): React.ReactElement {
             <NavLink
               to="/import"
               className={({ isActive }) =>
-                `px-4 py-2 rounded-md font-medium transition-colors ${
+                `relative px-4 flex items-center font-medium text-[15px] transition-colors duration-200 ${
                   isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'text-slate-600 hover:bg-blue-600 hover:text-white'
-                }`
+                    ? 'text-[#1877F2]'
+                    : 'text-[#65676B] hover:bg-[#F2F2F2] rounded-lg mx-0.5'
+                } ${isActive ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm' : ''}`
               }
             >
               Import CSV
@@ -57,30 +63,23 @@ function App(): React.ReactElement {
         <NavLink
           to="/settings"
           className={({ isActive }) =>
-            `p-2 rounded-md transition-colors ${
-              isActive ? 'bg-slate-200 text-slate-800' : 'text-slate-500 hover:bg-slate-100'
+            `w-10 h-10 flex items-center justify-center rounded-full transition-colors bg-[#E4E6EB] hover:bg-[#D8DADF] ${
+              isActive ? 'text-[#1877F2] bg-[#E7F3FF] hover:bg-[#DBE7F2]' : 'text-[#050505]'
             }`
           }
           title="Settings"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            fill="none"
+            fill="currentColor"
             viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="w-6 h-6"
+            className="w-5 h-5"
           >
             <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
+              className="opacity-20"
             />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-            />
+            <path d="M19.43 12.98c.04-.32.07-.64.07-.98 0-.34-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98 0 .33.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z" />
           </svg>
         </NavLink>
       </nav>
@@ -93,6 +92,28 @@ function App(): React.ReactElement {
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>
+
+      <button
+        onClick={() => setIsAddModalOpen(true)}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-[#1877F2] text-white rounded-full shadow-lg hover:bg-[#166FE5] hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40"
+        title="Add Participant"
+      >
+        <svg
+          className="w-7 h-7"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2.5}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
+
+      <AddParticipantModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => window.location.reload()}
+      />
     </div>
   )
 }

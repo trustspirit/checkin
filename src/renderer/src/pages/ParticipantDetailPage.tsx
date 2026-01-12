@@ -139,7 +139,7 @@ function ParticipantDetailPage(): React.ReactElement {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-16">
-        <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-3 border-[#DADDE1] border-t-[#1877F2] rounded-full animate-spin"></div>
       </div>
     )
   }
@@ -147,8 +147,8 @@ function ParticipantDetailPage(): React.ReactElement {
   if (!participant) {
     return (
       <div className="text-center py-16">
-        <h2 className="text-xl font-semibold text-slate-800 mb-2">Participant not found</h2>
-        <Link to="/" className="text-blue-600 hover:underline">
+        <h2 className="text-xl font-bold text-[#050505] mb-2">Participant not found</h2>
+        <Link to="/" className="text-[#1877F2] hover:underline font-semibold">
           Back to search
         </Link>
       </div>
@@ -161,7 +161,7 @@ function ParticipantDetailPage(): React.ReactElement {
     <div className="max-w-4xl mx-auto">
       <Link
         to="/"
-        className="inline-flex items-center gap-2 text-slate-500 hover:text-blue-600 mb-6 font-medium"
+        className="inline-flex items-center gap-2 text-[#65676B] hover:text-[#1877F2] mb-6 font-semibold transition-colors"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -169,11 +169,11 @@ function ParticipantDetailPage(): React.ReactElement {
         Back to search
       </Link>
 
-      <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 mb-6">
+      <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm p-6 mb-6">
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-slate-800">{participant.name}</h1>
-            <p className="text-slate-500 mt-1">
+            <h1 className="text-3xl font-bold text-[#050505]">{participant.name}</h1>
+            <p className="text-[#65676B] mt-1 text-lg">
               {participant.ward && participant.ward}
               {participant.stake && `, ${participant.stake}`}
             </p>
@@ -182,7 +182,7 @@ function ParticipantDetailPage(): React.ReactElement {
             {activeCheckIn ? (
               <button
                 onClick={() => handleCheckOut(activeCheckIn.id)}
-                className="px-6 py-3 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
+                className="px-6 py-2 bg-[#FA383E] text-white rounded-md font-semibold hover:bg-[#D32F2F] transition-colors shadow-sm"
               >
                 Check Out
               </button>
@@ -190,7 +190,7 @@ function ParticipantDetailPage(): React.ReactElement {
               <button
                 onClick={handleCheckIn}
                 disabled={isCheckingIn}
-                className="px-6 py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors disabled:opacity-50"
+                className="px-6 py-2 bg-[#1877F2] text-white rounded-md font-semibold hover:bg-[#166FE5] transition-colors shadow-sm disabled:opacity-50"
               >
                 {isCheckingIn ? 'Checking in...' : 'Check In'}
               </button>
@@ -199,107 +199,117 @@ function ParticipantDetailPage(): React.ReactElement {
         </div>
 
         {activeCheckIn && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center gap-2 text-green-700">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="font-medium">Currently Checked In</span>
-              <span className="text-green-600">since {formatDate(activeCheckIn.checkInTime)}</span>
+          <div className="bg-[#EFFFF6] border border-[#31A24C] rounded-md p-4 mb-6">
+            <div className="flex items-center gap-2 text-[#31A24C]">
+              <div className="w-3 h-3 bg-[#31A24C] rounded-full animate-pulse"></div>
+              <span className="font-bold">Currently Checked In</span>
+              <span className="text-[#31A24C]">since {formatDate(activeCheckIn.checkInTime)}</span>
             </div>
           </div>
         )}
 
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4 pb-2 border-b-2 border-slate-200">
+          <h2 className="text-lg font-bold text-[#050505] mb-4 pb-2 border-b border-[#DADDE1]">
             Personal Information
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="bg-slate-50 rounded-lg p-3">
-              <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Email</div>
-              <div className="font-medium text-slate-800">{participant.email}</div>
+            <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
+              <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
+                Email
+              </div>
+              <div className="font-semibold text-[#050505]">{participant.email}</div>
             </div>
-            <div className="bg-slate-50 rounded-lg p-3">
-              <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Phone</div>
-              <div className="font-medium text-slate-800">{participant.phoneNumber || '-'}</div>
+            <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
+              <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
+                Phone
+              </div>
+              <div className="font-semibold text-[#050505]">{participant.phoneNumber || '-'}</div>
             </div>
-            <div className="bg-slate-50 rounded-lg p-3">
-              <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Gender</div>
-              <div className="font-medium text-slate-800 capitalize">
+            <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
+              <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
+                Gender
+              </div>
+              <div className="font-semibold text-[#050505] capitalize">
                 {participant.gender || '-'}
               </div>
             </div>
-            <div className="bg-slate-50 rounded-lg p-3">
-              <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Age</div>
-              <div className="font-medium text-slate-800">{participant.age || '-'}</div>
+            <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
+              <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
+                Age
+              </div>
+              <div className="font-semibold text-[#050505]">{participant.age || '-'}</div>
             </div>
-            <div className="bg-slate-50 rounded-lg p-3">
-              <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Ward</div>
-              <div className="font-medium text-slate-800">{participant.ward || '-'}</div>
+            <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
+              <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
+                Ward
+              </div>
+              <div className="font-semibold text-[#050505]">{participant.ward || '-'}</div>
             </div>
-            <div className="bg-slate-50 rounded-lg p-3">
-              <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">Stake</div>
-              <div className="font-medium text-slate-800">{participant.stake || '-'}</div>
+            <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
+              <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
+                Stake
+              </div>
+              <div className="font-semibold text-[#050505]">{participant.stake || '-'}</div>
             </div>
           </div>
         </div>
 
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4 pb-2 border-b-2 border-slate-200">
+          <h2 className="text-lg font-bold text-[#050505] mb-4 pb-2 border-b border-[#DADDE1]">
             Group & Room Assignment
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Group Assignment */}
             <div>
-              <div className="text-sm font-medium text-slate-600 mb-2">Group</div>
+              <div className="text-sm font-semibold text-[#65676B] mb-2">Group</div>
               <div className="flex items-center gap-3">
                 {participant.groupName ? (
-                  <span className="px-4 py-2 bg-blue-500 text-white rounded-full font-medium">
+                  <span className="px-4 py-2 bg-[#E7F3FF] text-[#1877F2] rounded-md font-bold shadow-sm">
                     {participant.groupName}
                   </span>
                 ) : (
-                  <span className="px-4 py-2 bg-slate-200 text-slate-500 rounded-full">
+                  <span className="px-4 py-2 bg-[#F0F2F5] text-[#65676B] rounded-md font-medium">
                     Not assigned
                   </span>
                 )}
                 <button
                   onClick={() => setShowGroupSelect(!showGroupSelect)}
-                  className="text-blue-600 hover:underline text-sm font-medium"
+                  className="text-[#1877F2] hover:underline text-sm font-semibold"
                 >
                   {participant.groupName ? 'Change' : 'Assign'}
                 </button>
               </div>
               {showGroupSelect && (
-                <div className="mt-3 bg-white border border-slate-200 rounded-lg shadow-lg p-4">
-                  <div className="text-sm font-medium text-slate-700 mb-2">Select Group</div>
-                  <div className="max-h-48 overflow-y-auto mb-3">
+                <div className="mt-3 bg-white border border-[#DADDE1] rounded-lg shadow-xl p-4 z-10 relative">
+                  <div className="text-sm font-bold text-[#050505] mb-2">Select Group</div>
+                  <div className="max-h-48 overflow-y-auto mb-3 pr-1">
                     {groups.map((group) => (
                       <div
                         key={group.id}
                         onClick={() => handleGroupAssign(group)}
-                        className="flex justify-between items-center px-3 py-2 hover:bg-slate-50 rounded cursor-pointer"
+                        className="flex justify-between items-center px-3 py-2 hover:bg-[#F0F2F5] rounded cursor-pointer"
                       >
-                        <span>{group.name}</span>
-                        <span className="text-xs bg-slate-200 px-2 py-1 rounded">
+                        <span className="text-[#050505] font-medium">{group.name}</span>
+                        <span className="text-xs bg-[#F0F2F5] px-2 py-1 rounded text-[#65676B] font-medium">
                           {group.participantCount} members
                         </span>
                       </div>
                     ))}
                   </div>
-                  <div className="border-t border-slate-200 pt-3">
-                    <div className="text-sm font-medium text-slate-700 mb-2">
-                      Or create new group
-                    </div>
+                  <div className="border-t border-[#DADDE1] pt-3">
+                    <div className="text-sm font-bold text-[#050505] mb-2">Or create new group</div>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={newGroupName}
                         onChange={(e) => setNewGroupName(e.target.value)}
                         placeholder="Group name"
-                        className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                        className="flex-1 px-3 py-2 border border-[#DADDE1] rounded-md text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
                       />
                       <button
                         onClick={handleNewGroup}
                         disabled={!newGroupName.trim()}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 disabled:opacity-50"
+                        className="px-4 py-2 bg-[#1877F2] text-white rounded-md text-sm font-semibold hover:bg-[#166FE5] disabled:opacity-50"
                       >
                         Create
                       </button>
@@ -311,28 +321,28 @@ function ParticipantDetailPage(): React.ReactElement {
 
             {/* Room Assignment */}
             <div>
-              <div className="text-sm font-medium text-slate-600 mb-2">Room</div>
+              <div className="text-sm font-semibold text-[#65676B] mb-2">Room</div>
               <div className="flex items-center gap-3">
                 {participant.roomNumber ? (
-                  <span className="px-4 py-2 bg-purple-500 text-white rounded-full font-medium">
+                  <span className="px-4 py-2 bg-[#F0F2F5] text-[#050505] rounded-md font-bold shadow-sm">
                     Room {participant.roomNumber}
                   </span>
                 ) : (
-                  <span className="px-4 py-2 bg-slate-200 text-slate-500 rounded-full">
+                  <span className="px-4 py-2 bg-[#F0F2F5] text-[#65676B] rounded-md font-medium">
                     Not assigned
                   </span>
                 )}
                 <button
                   onClick={() => setShowRoomSelect(!showRoomSelect)}
-                  className="text-blue-600 hover:underline text-sm font-medium"
+                  className="text-[#1877F2] hover:underline text-sm font-semibold"
                 >
                   {participant.roomNumber ? 'Change' : 'Assign'}
                 </button>
               </div>
               {showRoomSelect && (
-                <div className="mt-3 bg-white border border-slate-200 rounded-lg shadow-lg p-4">
-                  <div className="text-sm font-medium text-slate-700 mb-2">Select Room</div>
-                  <div className="max-h-48 overflow-y-auto mb-3">
+                <div className="mt-3 bg-white border border-[#DADDE1] rounded-lg shadow-xl p-4 z-10 relative">
+                  <div className="text-sm font-bold text-[#050505] mb-2">Select Room</div>
+                  <div className="max-h-48 overflow-y-auto mb-3 pr-1">
                     {rooms.map((room) => {
                       const isFull = room.currentOccupancy >= room.maxCapacity
                       return (
@@ -342,13 +352,13 @@ function ParticipantDetailPage(): React.ReactElement {
                           className={`flex justify-between items-center px-3 py-2 rounded ${
                             isFull
                               ? 'opacity-50 cursor-not-allowed'
-                              : 'hover:bg-slate-50 cursor-pointer'
+                              : 'hover:bg-[#F0F2F5] cursor-pointer'
                           }`}
                         >
-                          <span>Room {room.roomNumber}</span>
+                          <span className="text-[#050505] font-medium">Room {room.roomNumber}</span>
                           <span
-                            className={`text-xs px-2 py-1 rounded ${
-                              isFull ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
+                            className={`text-xs px-2 py-1 rounded font-semibold ${
+                              isFull ? 'bg-[#FFEBEE] text-[#FA383E]' : 'bg-[#EFFFF6] text-[#31A24C]'
                             }`}
                           >
                             {room.currentOccupancy}/{room.maxCapacity}
@@ -357,17 +367,15 @@ function ParticipantDetailPage(): React.ReactElement {
                       )
                     })}
                   </div>
-                  <div className="border-t border-slate-200 pt-3">
-                    <div className="text-sm font-medium text-slate-700 mb-2">
-                      Or create new room
-                    </div>
+                  <div className="border-t border-[#DADDE1] pt-3">
+                    <div className="text-sm font-bold text-[#050505] mb-2">Or create new room</div>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={newRoomNumber}
                         onChange={(e) => setNewRoomNumber(e.target.value)}
                         placeholder="Room number"
-                        className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                        className="flex-1 px-3 py-2 border border-[#DADDE1] rounded-md text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
                       />
                       <input
                         type="number"
@@ -375,12 +383,12 @@ function ParticipantDetailPage(): React.ReactElement {
                         onChange={(e) => setNewRoomCapacity(parseInt(e.target.value) || 4)}
                         placeholder="Max"
                         min={1}
-                        className="w-20 px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                        className="w-20 px-3 py-2 border border-[#DADDE1] rounded-md text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
                       />
                       <button
                         onClick={handleNewRoom}
                         disabled={!newRoomNumber.trim()}
-                        className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-medium hover:bg-purple-600 disabled:opacity-50"
+                        className="px-4 py-2 bg-[#1877F2] text-white rounded-md text-sm font-semibold hover:bg-[#166FE5] disabled:opacity-50"
                       >
                         Create
                       </button>
@@ -394,7 +402,7 @@ function ParticipantDetailPage(): React.ReactElement {
 
         {/* Check-in History */}
         <div>
-          <h2 className="text-lg font-semibold text-slate-800 mb-4 pb-2 border-b-2 border-slate-200">
+          <h2 className="text-lg font-bold text-[#050505] mb-4 pb-2 border-b border-[#DADDE1]">
             Check-in History
           </h2>
           {participant.checkIns.length > 0 ? (
@@ -402,23 +410,23 @@ function ParticipantDetailPage(): React.ReactElement {
               {[...participant.checkIns].reverse().map((checkIn) => (
                 <div
                   key={checkIn.id}
-                  className="flex justify-between items-center bg-slate-50 rounded-lg px-4 py-3"
+                  className="flex justify-between items-center bg-[#F0F2F5] border border-transparent rounded-md px-4 py-3"
                 >
                   <div>
-                    <span className="font-medium text-slate-800">
+                    <span className="font-semibold text-[#050505]">
                       In: {formatDate(checkIn.checkInTime)}
                     </span>
                     {checkIn.checkOutTime && (
-                      <span className="text-slate-500 ml-4">
+                      <span className="text-[#65676B] ml-4 font-medium">
                         Out: {formatDate(checkIn.checkOutTime)}
                       </span>
                     )}
                   </div>
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    className={`px-3 py-1 rounded-md text-xs font-bold ${
                       checkIn.checkOutTime
-                        ? 'bg-slate-200 text-slate-600'
-                        : 'bg-green-100 text-green-700'
+                        ? 'bg-[#E4E6EB] text-[#65676B]'
+                        : 'bg-[#EFFFF6] text-[#31A24C] border border-[#31A24C]/20'
                     }`}
                   >
                     {checkIn.checkOutTime ? 'Completed' : 'Active'}
@@ -427,7 +435,7 @@ function ParticipantDetailPage(): React.ReactElement {
               ))}
             </div>
           ) : (
-            <p className="text-slate-500">No check-in history</p>
+            <p className="text-[#65676B]">No check-in history</p>
           )}
         </div>
       </div>
