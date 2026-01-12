@@ -17,7 +17,10 @@ import {
   limit,
   Firestore,
   onSnapshot,
-  Unsubscribe
+  Unsubscribe,
+  startAfter,
+  DocumentSnapshot,
+  QueryDocumentSnapshot
 } from 'firebase/firestore'
 import type { Participant, Group, Room, CheckInRecord, CSVParticipantRow } from '../types'
 
@@ -172,6 +175,122 @@ export const getAllParticipants = async (): Promise<Participant[]> => {
       updatedAt: convertTimestamp(data.updatedAt)
     } as Participant
   })
+}
+
+export interface PaginatedResult<T> {
+  data: T[]
+  lastDoc: QueryDocumentSnapshot | null
+  hasMore: boolean
+}
+
+export interface ParticipantFilters {
+  searchTerm?: string
+  checkInStatus?: 'all' | 'checked-in' | 'not-checked-in'
+}
+
+const parseParticipantDoc = (doc: QueryDocumentSnapshot): Participant => {
+  const data = doc.data()
+  return {
+    id: doc.id,
+    ...data,
+    checkIns: (data.checkIns || []).map(
+      (ci: { id: string; checkInTime: Timestamp; checkOutTime?: Timestamp }) => ({
+        ...ci,
+        checkInTime: convertTimestamp(ci.checkInTime),
+        checkOutTime: ci.checkOutTime ? convertTimestamp(ci.checkOutTime) : undefined
+      })
+    ),
+    createdAt: convertTimestamp(data.createdAt),
+    updatedAt: convertTimestamp(data.updatedAt)
+  } as Participant
+}
+
+const isCheckedIn = (participant: Participant): boolean => {
+  return participant.checkIns.some((ci) => !ci.checkOutTime)
+}
+
+export const getParticipantsPaginated = async (
+  pageSize: number = 100,
+  cursor?: QueryDocumentSnapshot | null,
+  filters?: ParticipantFilters
+): Promise<PaginatedResult<Participant>> => {
+  const participantsRef = collection(getDb(), PARTICIPANTS_COLLECTION)
+
+  let q = query(participantsRef, orderBy('name'), limit(pageSize + 1))
+
+  if (cursor) {
+    q = query(participantsRef, orderBy('name'), startAfter(cursor), limit(pageSize + 1))
+  }
+
+  const snapshot = await getDocs(q)
+  const docs = snapshot.docs
+  const hasMore = docs.length > pageSize
+  const resultDocs = hasMore ? docs.slice(0, pageSize) : docs
+
+  let participants = resultDocs.map(parseParticipantDoc)
+
+  if (filters?.searchTerm) {
+    const searchLower = filters.searchTerm.toLowerCase()
+    participants = participants.filter(
+      (p) =>
+        p.name.toLowerCase().includes(searchLower) ||
+        p.email.toLowerCase().includes(searchLower) ||
+        p.phoneNumber?.toLowerCase().includes(searchLower) ||
+        p.ward?.toLowerCase().includes(searchLower) ||
+        p.stake?.toLowerCase().includes(searchLower)
+    )
+  }
+
+  if (filters?.checkInStatus && filters.checkInStatus !== 'all') {
+    participants = participants.filter((p) => {
+      const checkedIn = isCheckedIn(p)
+      return filters.checkInStatus === 'checked-in' ? checkedIn : !checkedIn
+    })
+  }
+
+  return {
+    data: participants,
+    lastDoc: resultDocs.length > 0 ? resultDocs[resultDocs.length - 1] : null,
+    hasMore
+  }
+}
+
+export const searchParticipantsPaginated = async (
+  searchTerm: string,
+  checkInStatus: 'all' | 'checked-in' | 'not-checked-in' = 'all',
+  pageSize: number = 100,
+  loadedIds: Set<string> = new Set()
+): Promise<{ data: Participant[]; hasMore: boolean }> => {
+  const participantsRef = collection(getDb(), PARTICIPANTS_COLLECTION)
+  const q = query(participantsRef, orderBy('name'))
+  const snapshot = await getDocs(q)
+
+  let participants = snapshot.docs.map(parseParticipantDoc)
+
+  if (searchTerm) {
+    const searchLower = searchTerm.toLowerCase()
+    participants = participants.filter(
+      (p) =>
+        p.name.toLowerCase().includes(searchLower) ||
+        p.email.toLowerCase().includes(searchLower) ||
+        p.phoneNumber?.toLowerCase().includes(searchLower) ||
+        p.ward?.toLowerCase().includes(searchLower) ||
+        p.stake?.toLowerCase().includes(searchLower)
+    )
+  }
+
+  if (checkInStatus !== 'all') {
+    participants = participants.filter((p) => {
+      const checkedIn = isCheckedIn(p)
+      return checkInStatus === 'checked-in' ? checkedIn : !checkedIn
+    })
+  }
+
+  const notLoaded = participants.filter((p) => !loadedIds.has(p.id))
+  const pageData = notLoaded.slice(0, pageSize)
+  const hasMore = notLoaded.length > pageSize
+
+  return { data: pageData, hasMore }
 }
 
 export interface CreateParticipantData {

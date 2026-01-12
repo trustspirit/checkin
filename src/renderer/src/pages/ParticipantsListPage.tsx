@@ -1,7 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { moveParticipantsToRoom, moveParticipantsToGroup } from '../services/firebase'
+import {
+  moveParticipantsToRoom,
+  moveParticipantsToGroup,
+  searchParticipantsPaginated
+} from '../services/firebase'
 import {
   participantsAtom,
   groupsAtom,
@@ -14,7 +18,7 @@ import type { Participant, Group, Room } from '../types'
 type CheckInFilter = 'all' | 'checked-in' | 'not-checked-in'
 
 function ParticipantsListPage(): React.ReactElement {
-  const participants = useAtomValue(participantsAtom)
+  const allParticipants = useAtomValue(participantsAtom)
   const groups = useAtomValue(groupsAtom)
   const rooms = useAtomValue(roomsAtom)
   const isLoading = useAtomValue(isLoadingAtom)
@@ -32,6 +36,18 @@ function ParticipantsListPage(): React.ReactElement {
   const [isMoving, setIsMoving] = useState(false)
   const [moveError, setMoveError] = useState<string | null>(null)
 
+  const [displayedParticipants, setDisplayedParticipants] = useState<Participant[]>([])
+  const [hasMore, setHasMore] = useState(true)
+  const [isSearching, setIsSearching] = useState(false)
+  const pageSize = 100
+
+  const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null)
+  const [hoveredRoomId, setHoveredRoomId] = useState<string | null>(null)
+
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   const navigate = useNavigate()
 
   const getCheckInStatus = (participant: Participant) => {
@@ -39,26 +55,71 @@ function ParticipantsListPage(): React.ReactElement {
     return activeCheckIn ? 'checked-in' : 'not-checked-in'
   }
 
-  const checkedInCount = participants.filter((p) => getCheckInStatus(p) === 'checked-in').length
-  const notCheckedInCount = participants.length - checkedInCount
+  const checkedInCount = allParticipants.filter((p) => getCheckInStatus(p) === 'checked-in').length
+  const notCheckedInCount = allParticipants.length - checkedInCount
 
-  const filteredParticipants = participants.filter((p) => {
-    const searchTerm = filter.toLowerCase()
-    const matchesSearch =
-      p.name.toLowerCase().includes(searchTerm) ||
-      p.email.toLowerCase().includes(searchTerm) ||
-      p.phoneNumber?.toLowerCase().includes(searchTerm) ||
-      p.ward?.toLowerCase().includes(searchTerm) ||
-      p.stake?.toLowerCase().includes(searchTerm)
+  const loadParticipants = useCallback(
+    async (reset: boolean = false) => {
+      setIsSearching(true)
+      try {
+        const loadedIds = reset
+          ? new Set<string>()
+          : new Set(displayedParticipants.map((p) => p.id))
+        const result = await searchParticipantsPaginated(filter, checkInFilter, pageSize, loadedIds)
 
-    if (!matchesSearch) return false
+        if (reset) {
+          setDisplayedParticipants(result.data)
+        } else {
+          setDisplayedParticipants((prev) => [...prev, ...result.data])
+        }
+        setHasMore(result.hasMore)
+      } catch (error) {
+        console.error('Failed to load participants:', error)
+      } finally {
+        setIsSearching(false)
+      }
+    },
+    [filter, checkInFilter, displayedParticipants]
+  )
 
-    if (checkInFilter === 'all') return true
-    return getCheckInStatus(p) === checkInFilter
-  })
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      loadParticipants(true)
+    }, 300)
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [filter, checkInFilter])
+
+  useEffect(() => {
+    if (!loadMoreRef.current || !hasMore || isSearching) return
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isSearching) {
+          loadParticipants(false)
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    observerRef.current.observe(loadMoreRef.current)
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect()
+      }
+    }
+  }, [hasMore, isSearching, loadParticipants])
 
   const getGroupMembers = (groupId: string) => {
-    return participants.filter((p) => p.groupId === groupId)
+    return allParticipants.filter((p) => p.groupId === groupId)
   }
 
   const toggleGroupExpand = (groupId: string) => {
@@ -67,7 +128,7 @@ function ParticipantsListPage(): React.ReactElement {
   }
 
   const getRoomMembers = (roomId: string) => {
-    return participants.filter((p) => p.roomId === roomId)
+    return allParticipants.filter((p) => p.roomId === roomId)
   }
 
   const toggleRoomExpand = (roomId: string) => {
@@ -161,7 +222,7 @@ function ParticipantsListPage(): React.ReactElement {
               : 'text-[#65676B] hover:bg-[#F2F2F2] rounded-t-lg'
           }`}
         >
-          Participants ({participants.length})
+          Participants ({allParticipants.length})
         </button>
         <button
           onClick={() => setActiveTab('groups')}
@@ -206,7 +267,7 @@ function ParticipantsListPage(): React.ReactElement {
                         : 'text-[#65676B] hover:text-[#050505]'
                     }`}
                   >
-                    All ({participants.length})
+                    All ({allParticipants.length})
                   </button>
                   <button
                     onClick={() => setCheckInFilter('checked-in')}
@@ -260,7 +321,7 @@ function ParticipantsListPage(): React.ReactElement {
                 </tr>
               </thead>
               <tbody>
-                {filteredParticipants.map((participant) => (
+                {displayedParticipants.map((participant) => (
                   <tr
                     key={participant.id}
                     onClick={() => navigate(`/participant/${participant.id}`)}
@@ -303,16 +364,30 @@ function ParticipantsListPage(): React.ReactElement {
                 ))}
               </tbody>
             </table>
-            {filteredParticipants.length === 0 && (
+            {displayedParticipants.length === 0 && !isSearching && (
               <div className="text-center py-8 text-[#65676B]">No participants found</div>
+            )}
+            {hasMore && (
+              <div ref={loadMoreRef} className="flex justify-center py-4">
+                {isSearching ? (
+                  <div className="w-6 h-6 border-2 border-[#DADDE1] border-t-[#1877F2] rounded-full animate-spin" />
+                ) : (
+                  <span className="text-[#65676B] text-sm">Scroll to load more...</span>
+                )}
+              </div>
+            )}
+            {isSearching && displayedParticipants.length === 0 && (
+              <div className="flex justify-center py-8">
+                <div className="w-6 h-6 border-2 border-[#DADDE1] border-t-[#1877F2] rounded-full animate-spin" />
+              </div>
             )}
           </div>
         </div>
       )}
 
       {activeTab === 'groups' && (
-        <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm">
-          <div className="overflow-x-auto">
+        <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm overflow-visible">
+          <div className="overflow-visible">
             <table className="w-full">
               <thead>
                 <tr className="bg-[#F0F2F5] border-b border-[#DADDE1]">
@@ -336,7 +411,9 @@ function ParticipantsListPage(): React.ReactElement {
                     <React.Fragment key={group.id}>
                       <tr
                         onClick={() => toggleGroupExpand(group.id)}
-                        className="border-b border-[#DADDE1] last:border-0 hover:bg-[#F0F2F5] cursor-pointer transition-colors"
+                        onMouseEnter={() => setHoveredGroupId(group.id)}
+                        onMouseLeave={() => setHoveredGroupId(null)}
+                        className="border-b border-[#DADDE1] last:border-0 hover:bg-[#F0F2F5] cursor-pointer transition-colors relative"
                       >
                         <td className="px-4 py-3 text-[#65676B]">
                           <span
@@ -345,7 +422,23 @@ function ParticipantsListPage(): React.ReactElement {
                             ▶
                           </span>
                         </td>
-                        <td className="px-4 py-3 font-semibold text-[#050505]">{group.name}</td>
+                        <td className="px-4 py-3 font-semibold text-[#050505] relative">
+                          {group.name}
+                          {hoveredGroupId === group.id && members.length > 0 && !isExpanded && (
+                            <div className="absolute left-0 top-full mt-1 bg-[#050505] text-white text-xs rounded-lg py-2 px-3 z-30 min-w-[160px] max-w-[240px] shadow-lg pointer-events-none">
+                              <div className="absolute left-4 bottom-full w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-[#050505]" />
+                              <div className="font-semibold mb-1">Members:</div>
+                              {members.slice(0, 5).map((m) => (
+                                <div key={m.id} className="truncate">
+                                  {m.name}
+                                </div>
+                              ))}
+                              {members.length > 5 && (
+                                <div className="text-gray-400 mt-1">+{members.length - 5} more</div>
+                              )}
+                            </div>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <span className="px-3 py-1 bg-[#E7F3FF] text-[#1877F2] rounded-full text-sm font-medium">
                             {group.participantCount} members
@@ -494,8 +587,8 @@ function ParticipantsListPage(): React.ReactElement {
       )}
 
       {activeTab === 'rooms' && (
-        <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm">
-          <div className="overflow-x-auto">
+        <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm overflow-visible">
+          <div className="overflow-visible">
             <table className="w-full">
               <thead>
                 <tr className="bg-[#F0F2F5] border-b border-[#DADDE1]">
@@ -524,7 +617,9 @@ function ParticipantsListPage(): React.ReactElement {
                     <React.Fragment key={room.id}>
                       <tr
                         onClick={() => toggleRoomExpand(room.id)}
-                        className="border-b border-[#DADDE1] last:border-0 hover:bg-[#F0F2F5] cursor-pointer transition-colors"
+                        onMouseEnter={() => setHoveredRoomId(room.id)}
+                        onMouseLeave={() => setHoveredRoomId(null)}
+                        className="border-b border-[#DADDE1] last:border-0 hover:bg-[#F0F2F5] cursor-pointer transition-colors relative"
                       >
                         <td className="px-4 py-3 text-[#65676B]">
                           <span
@@ -533,8 +628,22 @@ function ParticipantsListPage(): React.ReactElement {
                             ▶
                           </span>
                         </td>
-                        <td className="px-4 py-3 font-semibold text-[#050505]">
+                        <td className="px-4 py-3 font-semibold text-[#050505] relative">
                           Room {room.roomNumber}
+                          {hoveredRoomId === room.id && members.length > 0 && !isExpanded && (
+                            <div className="absolute left-0 top-full mt-1 bg-[#050505] text-white text-xs rounded-lg py-2 px-3 z-30 min-w-[160px] max-w-[240px] shadow-lg pointer-events-none">
+                              <div className="absolute left-4 bottom-full w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-[#050505]" />
+                              <div className="font-semibold mb-1">Occupants:</div>
+                              {members.slice(0, 5).map((m) => (
+                                <div key={m.id} className="truncate">
+                                  {m.name}
+                                </div>
+                              ))}
+                              {members.length > 5 && (
+                                <div className="text-gray-400 mt-1">+{members.length - 5} more</div>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">

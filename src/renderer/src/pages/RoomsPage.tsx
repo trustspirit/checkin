@@ -137,7 +137,8 @@ function RoomsPage(): React.ReactElement {
     if (hoveredRoomId !== roomId || roomParticipants.length === 0) return null
 
     return (
-      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-[#050505] text-white text-xs rounded-lg py-2 px-3 z-30 min-w-[160px] max-w-[240px] shadow-lg pointer-events-none">
+      <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-[#050505] text-white text-xs rounded-lg py-2 px-3 z-30 min-w-[160px] max-w-[240px] shadow-lg pointer-events-none">
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-full w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-[#050505]" />
         <div className="font-semibold mb-1">Participants:</div>
         {roomParticipants.slice(0, 5).map((p) => (
           <div key={p.id} className="truncate">
@@ -147,7 +148,6 @@ function RoomsPage(): React.ReactElement {
         {roomParticipants.length > 5 && (
           <div className="text-gray-400 mt-1">+{roomParticipants.length - 5} more</div>
         )}
-        <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#050505]" />
       </div>
     )
   }
@@ -300,11 +300,11 @@ function RoomsPage(): React.ReactElement {
           <p className="text-[#65676B] mt-2 text-sm">Add rooms for participant accommodation</p>
         </div>
       ) : viewMode === 'list' ? (
-        <div className="bg-white rounded-lg border border-[#DADDE1] overflow-hidden">
+        <div className="bg-white rounded-lg border border-[#DADDE1]">
           <table className="w-full">
-            <thead className="bg-[#F0F2F5] border-b border-[#DADDE1]">
+            <thead className="bg-[#F0F2F5] border-b border-[#DADDE1] rounded-t-lg">
               <tr>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold">
+                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold rounded-tl-lg">
                   Room
                 </th>
                 <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold">
@@ -313,7 +313,7 @@ function RoomsPage(): React.ReactElement {
                 <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold">
                   Status
                 </th>
-                <th className="text-right px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold">
+                <th className="text-right px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold rounded-tr-lg">
                   Actions
                 </th>
               </tr>
