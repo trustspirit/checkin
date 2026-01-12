@@ -1,7 +1,15 @@
+export * from './enums'
+
+export type Gender = 'male' | 'female' | 'other' | string
+
+export type CheckInFilter = 'all' | 'checked-in' | 'not-checked-in'
+
+export type TabType = 'participants' | 'groups' | 'rooms'
+
 export interface Participant {
   id: string
   name: string
-  gender: 'male' | 'female' | 'other' | string
+  gender: Gender
   age: number
   stake: string
   ward: string
@@ -52,4 +60,15 @@ export interface CSVParticipantRow {
   groupName?: string
   roomNumber?: string
   [key: string]: string | undefined
+}
+
+export interface AuditLogEntry {
+  id: string
+  timestamp: string
+  userName: string
+  action: 'create' | 'update' | 'delete' | 'check_in' | 'check_out' | 'assign' | 'import'
+  targetType: 'participant' | 'group' | 'room'
+  targetId: string
+  targetName: string
+  changes?: Record<string, { from: unknown; to: unknown }>
 }

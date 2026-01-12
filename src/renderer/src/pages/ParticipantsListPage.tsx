@@ -13,9 +13,19 @@ import {
   isLoadingAtom,
   syncAtom
 } from '../stores/dataStore'
-import type { Participant, Group, Room } from '../types'
-
-type CheckInFilter = 'all' | 'checked-in' | 'not-checked-in'
+import type { Participant, Group, Room, CheckInFilter, TabType } from '../types'
+import { CheckInStatus } from '../types'
+import {
+  TabBar,
+  Tooltip,
+  CheckInFilterButtons,
+  CheckInStatusBadge,
+  getCheckInStatusFromParticipant,
+  OccupancyBar,
+  MoveToModal,
+  ExpandArrow,
+  MemberSelectionTable
+} from '../components'
 
 function ParticipantsListPage(): React.ReactElement {
   const allParticipants = useAtomValue(participantsAtom)
@@ -25,7 +35,7 @@ function ParticipantsListPage(): React.ReactElement {
   const sync = useSetAtom(syncAtom)
   const [filter, setFilter] = useState('')
   const [checkInFilter, setCheckInFilter] = useState<CheckInFilter>('all')
-  const [activeTab, setActiveTab] = useState<'participants' | 'groups' | 'rooms'>('participants')
+  const [activeTab, setActiveTab] = useState<TabType>('participants')
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null)
   const [expandedRoomId, setExpandedRoomId] = useState<string | null>(null)
 
@@ -50,12 +60,9 @@ function ParticipantsListPage(): React.ReactElement {
 
   const navigate = useNavigate()
 
-  const getCheckInStatus = (participant: Participant) => {
-    const activeCheckIn = participant.checkIns.find((ci) => !ci.checkOutTime)
-    return activeCheckIn ? 'checked-in' : 'not-checked-in'
-  }
-
-  const checkedInCount = allParticipants.filter((p) => getCheckInStatus(p) === 'checked-in').length
+  const checkedInCount = allParticipants.filter(
+    (p) => getCheckInStatusFromParticipant(p.checkIns) === CheckInStatus.CheckedIn
+  ).length
   const notCheckedInCount = allParticipants.length - checkedInCount
 
   const loadParticipants = useCallback(
@@ -198,6 +205,12 @@ function ParticipantsListPage(): React.ReactElement {
     }
   }
 
+  const tabs = [
+    { id: 'participants' as TabType, label: 'Participants', count: allParticipants.length },
+    { id: 'groups' as TabType, label: 'Groups', count: groups.length },
+    { id: 'rooms' as TabType, label: 'Rooms', count: rooms.length }
+  ]
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-16">
@@ -213,38 +226,7 @@ function ParticipantsListPage(): React.ReactElement {
         <p className="text-[#65676B]">View all participants, groups, and rooms</p>
       </div>
 
-      <div className="flex border-b border-[#DADDE1] mb-6">
-        <button
-          onClick={() => setActiveTab('participants')}
-          className={`relative px-4 py-3 font-medium text-[15px] transition-colors ${
-            activeTab === 'participants'
-              ? 'text-[#1877F2] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm'
-              : 'text-[#65676B] hover:bg-[#F2F2F2] rounded-t-lg'
-          }`}
-        >
-          Participants ({allParticipants.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('groups')}
-          className={`relative px-4 py-3 font-medium text-[15px] transition-colors ${
-            activeTab === 'groups'
-              ? 'text-[#1877F2] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm'
-              : 'text-[#65676B] hover:bg-[#F2F2F2] rounded-t-lg'
-          }`}
-        >
-          Groups ({groups.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('rooms')}
-          className={`relative px-4 py-3 font-medium text-[15px] transition-colors ${
-            activeTab === 'rooms'
-              ? 'text-[#1877F2] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm'
-              : 'text-[#65676B] hover:bg-[#F2F2F2] rounded-t-lg'
-          }`}
-        >
-          Rooms ({rooms.length})
-        </button>
-      </div>
+      <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
       {activeTab === 'participants' && (
         <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm">
@@ -258,38 +240,15 @@ function ParticipantsListPage(): React.ReactElement {
                 className="flex-1 md:max-w-80 px-4 py-2 bg-[#F0F2F5] border-none rounded-full outline-none focus:ring-2 focus:ring-[#1877F2] placeholder-[#65676B]"
               />
               <div className="flex items-center gap-2">
-                <div className="flex bg-[#F0F2F5] rounded-lg p-1">
-                  <button
-                    onClick={() => setCheckInFilter('all')}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      checkInFilter === 'all'
-                        ? 'bg-white text-[#050505] shadow-sm'
-                        : 'text-[#65676B] hover:text-[#050505]'
-                    }`}
-                  >
-                    All ({allParticipants.length})
-                  </button>
-                  <button
-                    onClick={() => setCheckInFilter('checked-in')}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      checkInFilter === 'checked-in'
-                        ? 'bg-white text-[#31A24C] shadow-sm'
-                        : 'text-[#65676B] hover:text-[#050505]'
-                    }`}
-                  >
-                    Checked In ({checkedInCount})
-                  </button>
-                  <button
-                    onClick={() => setCheckInFilter('not-checked-in')}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      checkInFilter === 'not-checked-in'
-                        ? 'bg-white text-[#FA383E] shadow-sm'
-                        : 'text-[#65676B] hover:text-[#050505]'
-                    }`}
-                  >
-                    Not Checked In ({notCheckedInCount})
-                  </button>
-                </div>
+                <CheckInFilterButtons
+                  filter={checkInFilter}
+                  onChange={setCheckInFilter}
+                  counts={{
+                    all: allParticipants.length,
+                    checkedIn: checkedInCount,
+                    notCheckedIn: notCheckedInCount
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -350,15 +309,9 @@ function ParticipantsListPage(): React.ReactElement {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {getCheckInStatus(participant) === 'checked-in' ? (
-                        <span className="px-2 py-1 bg-[#EFFFF6] text-[#31A24C] rounded-md text-xs font-semibold">
-                          Checked In
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 bg-[#F0F2F5] text-[#65676B] rounded-md text-xs font-semibold">
-                          Not Checked In
-                        </span>
-                      )}
+                      <CheckInStatusBadge
+                        status={getCheckInStatusFromParticipant(participant.checkIns)}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -416,27 +369,15 @@ function ParticipantsListPage(): React.ReactElement {
                         className="border-b border-[#DADDE1] last:border-0 hover:bg-[#F0F2F5] cursor-pointer transition-colors relative"
                       >
                         <td className="px-4 py-3 text-[#65676B]">
-                          <span
-                            className={`inline-block transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                          >
-                            ▶
-                          </span>
+                          <ExpandArrow isExpanded={isExpanded} />
                         </td>
                         <td className="px-4 py-3 font-semibold text-[#050505] relative">
                           {group.name}
                           {hoveredGroupId === group.id && members.length > 0 && !isExpanded && (
-                            <div className="absolute left-0 top-full mt-1 bg-[#050505] text-white text-xs rounded-lg py-2 px-3 z-30 min-w-[160px] max-w-[240px] shadow-lg pointer-events-none">
-                              <div className="absolute left-4 bottom-full w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-[#050505]" />
-                              <div className="font-semibold mb-1">Members:</div>
-                              {members.slice(0, 5).map((m) => (
-                                <div key={m.id} className="truncate">
-                                  {m.name}
-                                </div>
-                              ))}
-                              {members.length > 5 && (
-                                <div className="text-gray-400 mt-1">+{members.length - 5} more</div>
-                              )}
-                            </div>
+                            <Tooltip
+                              title="Members"
+                              items={members.map((m) => ({ id: m.id, name: m.name }))}
+                            />
                           )}
                         </td>
                         <td className="px-4 py-3">
@@ -457,115 +398,25 @@ function ParticipantsListPage(): React.ReactElement {
                             className="bg-[#F0F2F5] px-4 py-2 border-b border-[#DADDE1]"
                           >
                             {members.length > 0 ? (
-                              <div className="ml-6 border-l-2 border-[#1877F2]/30 pl-4">
-                                {selectedGroupMembers.size > 0 && (
-                                  <div className="mb-3 flex items-center gap-3">
-                                    <span className="text-sm text-[#65676B]">
-                                      {selectedGroupMembers.size} selected
-                                    </span>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setMoveError(null)
-                                        setShowMoveToGroupModal(true)
-                                      }}
-                                      className="px-3 py-1 bg-[#1877F2] text-white text-sm rounded-md hover:bg-[#166FE5] font-semibold shadow-sm"
-                                    >
-                                      Move to Another Group
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setSelectedGroupMembers(new Set())
-                                      }}
-                                      className="px-3 py-1 bg-[#E4E6EB] text-[#050505] text-sm rounded-md hover:bg-[#D8DADF] font-semibold"
-                                    >
-                                      Clear Selection
-                                    </button>
-                                  </div>
-                                )}
-                                <table className="w-full">
-                                  <thead>
-                                    <tr className="text-xs text-[#65676B]">
-                                      <th className="py-2 text-left font-medium w-8">
-                                        <input
-                                          type="checkbox"
-                                          checked={
-                                            members.length > 0 &&
-                                            members.every((m) => selectedGroupMembers.has(m.id))
-                                          }
-                                          onChange={(e) => {
-                                            e.stopPropagation()
-                                            if (
-                                              members.every((m) => selectedGroupMembers.has(m.id))
-                                            ) {
-                                              setSelectedGroupMembers(new Set())
-                                            } else {
-                                              setSelectedGroupMembers(
-                                                new Set(members.map((m) => m.id))
-                                              )
-                                            }
-                                          }}
-                                          onClick={(e) => e.stopPropagation()}
-                                          className="w-4 h-4 rounded border-[#DADDE1] text-[#1877F2] focus:ring-[#1877F2]"
-                                        />
-                                      </th>
-                                      <th className="py-2 text-left font-medium">Name</th>
-                                      <th className="py-2 text-left font-medium">Email</th>
-                                      <th className="py-2 text-left font-medium">Phone</th>
-                                      <th className="py-2 text-left font-medium">Status</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {members.map((member) => (
-                                      <tr
-                                        key={member.id}
-                                        className={`hover:bg-[#E7F3FF]/50 cursor-pointer ${
-                                          selectedGroupMembers.has(member.id)
-                                            ? 'bg-[#E7F3FF]/50'
-                                            : ''
-                                        }`}
-                                      >
-                                        <td className="py-2">
-                                          <input
-                                            type="checkbox"
-                                            checked={selectedGroupMembers.has(member.id)}
-                                            onChange={() => toggleGroupMemberSelection(member.id)}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="w-4 h-4 rounded border-[#DADDE1] text-[#1877F2] focus:ring-[#1877F2]"
-                                          />
-                                        </td>
-                                        <td
-                                          className="py-2 text-sm font-semibold text-[#050505]"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            navigate(`/participant/${member.id}`)
-                                          }}
-                                        >
-                                          {member.name}
-                                        </td>
-                                        <td className="py-2 text-sm text-[#65676B]">
-                                          {member.email}
-                                        </td>
-                                        <td className="py-2 text-sm text-[#65676B]">
-                                          {member.phoneNumber || '-'}
-                                        </td>
-                                        <td className="py-2">
-                                          {getCheckInStatus(member) === 'checked-in' ? (
-                                            <span className="px-2 py-1 bg-[#EFFFF6] text-[#31A24C] rounded-md text-xs font-semibold">
-                                              Checked In
-                                            </span>
-                                          ) : (
-                                            <span className="px-2 py-1 bg-[#F0F2F5] text-[#65676B] rounded-md text-xs font-semibold">
-                                              Not Checked In
-                                            </span>
-                                          )}
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
+                              <MemberSelectionTable
+                                members={members}
+                                selectedIds={selectedGroupMembers}
+                                onToggle={toggleGroupMemberSelection}
+                                onToggleAll={() => {
+                                  if (members.every((m) => selectedGroupMembers.has(m.id))) {
+                                    setSelectedGroupMembers(new Set())
+                                  } else {
+                                    setSelectedGroupMembers(new Set(members.map((m) => m.id)))
+                                  }
+                                }}
+                                onNavigate={(id) => navigate(`/participant/${id}`)}
+                                onClearSelection={() => setSelectedGroupMembers(new Set())}
+                                onMoveAction={() => {
+                                  setMoveError(null)
+                                  setShowMoveToGroupModal(true)
+                                }}
+                                moveActionLabel="Move to Another Group"
+                              />
                             ) : (
                               <div className="ml-6 py-2 text-sm text-[#65676B]">
                                 No members in this group
@@ -610,7 +461,6 @@ function ParticipantsListPage(): React.ReactElement {
               <tbody>
                 {rooms.map((room) => {
                   const isFull = room.currentOccupancy >= room.maxCapacity
-                  const occupancyPercent = (room.currentOccupancy / room.maxCapacity) * 100
                   const isExpanded = expandedRoomId === room.id
                   const members = getRoomMembers(room.id)
                   return (
@@ -622,47 +472,19 @@ function ParticipantsListPage(): React.ReactElement {
                         className="border-b border-[#DADDE1] last:border-0 hover:bg-[#F0F2F5] cursor-pointer transition-colors relative"
                       >
                         <td className="px-4 py-3 text-[#65676B]">
-                          <span
-                            className={`inline-block transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                          >
-                            ▶
-                          </span>
+                          <ExpandArrow isExpanded={isExpanded} />
                         </td>
                         <td className="px-4 py-3 font-semibold text-[#050505] relative">
                           Room {room.roomNumber}
                           {hoveredRoomId === room.id && members.length > 0 && !isExpanded && (
-                            <div className="absolute left-0 top-full mt-1 bg-[#050505] text-white text-xs rounded-lg py-2 px-3 z-30 min-w-[160px] max-w-[240px] shadow-lg pointer-events-none">
-                              <div className="absolute left-4 bottom-full w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-[#050505]" />
-                              <div className="font-semibold mb-1">Occupants:</div>
-                              {members.slice(0, 5).map((m) => (
-                                <div key={m.id} className="truncate">
-                                  {m.name}
-                                </div>
-                              ))}
-                              {members.length > 5 && (
-                                <div className="text-gray-400 mt-1">+{members.length - 5} more</div>
-                              )}
-                            </div>
+                            <Tooltip
+                              title="Occupants"
+                              items={members.map((m) => ({ id: m.id, name: m.name }))}
+                            />
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-32 h-2 bg-[#F0F2F5] rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${
-                                  isFull
-                                    ? 'bg-[#FA383E]'
-                                    : occupancyPercent > 75
-                                      ? 'bg-yellow-500'
-                                      : 'bg-[#31A24C]'
-                                }`}
-                                style={{ width: `${occupancyPercent}%` }}
-                              />
-                            </div>
-                            <span className="text-sm text-[#65676B]">
-                              {room.currentOccupancy} / {room.maxCapacity}
-                            </span>
-                          </div>
+                          <OccupancyBar current={room.currentOccupancy} max={room.maxCapacity} />
                         </td>
                         <td className="px-4 py-3">
                           {isFull ? (
@@ -688,113 +510,25 @@ function ParticipantsListPage(): React.ReactElement {
                             className="bg-[#F0F2F5] px-4 py-2 border-b border-[#DADDE1]"
                           >
                             {members.length > 0 ? (
-                              <div className="ml-6 border-l-2 border-[#1877F2]/30 pl-4">
-                                {selectedRoomMembers.size > 0 && (
-                                  <div className="mb-3 flex items-center gap-3">
-                                    <span className="text-sm text-[#65676B]">
-                                      {selectedRoomMembers.size} selected
-                                    </span>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setMoveError(null)
-                                        setShowMoveToRoomModal(true)
-                                      }}
-                                      className="px-3 py-1 bg-[#1877F2] text-white text-sm rounded-md hover:bg-[#166FE5] font-semibold shadow-sm"
-                                    >
-                                      Move to Another Room
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setSelectedRoomMembers(new Set())
-                                      }}
-                                      className="px-3 py-1 bg-[#E4E6EB] text-[#050505] text-sm rounded-md hover:bg-[#D8DADF] font-semibold"
-                                    >
-                                      Clear Selection
-                                    </button>
-                                  </div>
-                                )}
-                                <table className="w-full">
-                                  <thead>
-                                    <tr className="text-xs text-[#65676B]">
-                                      <th className="py-2 text-left font-medium w-8">
-                                        <input
-                                          type="checkbox"
-                                          checked={
-                                            members.length > 0 &&
-                                            members.every((m) => selectedRoomMembers.has(m.id))
-                                          }
-                                          onChange={(e) => {
-                                            e.stopPropagation()
-                                            if (
-                                              members.every((m) => selectedRoomMembers.has(m.id))
-                                            ) {
-                                              setSelectedRoomMembers(new Set())
-                                            } else {
-                                              setSelectedRoomMembers(
-                                                new Set(members.map((m) => m.id))
-                                              )
-                                            }
-                                          }}
-                                          onClick={(e) => e.stopPropagation()}
-                                          className="w-4 h-4 rounded border-[#DADDE1] text-[#1877F2] focus:ring-[#1877F2]"
-                                        />
-                                      </th>
-                                      <th className="py-2 text-left font-medium">Name</th>
-                                      <th className="py-2 text-left font-medium">Email</th>
-                                      <th className="py-2 text-left font-medium">Phone</th>
-                                      <th className="py-2 text-left font-medium">Status</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {members.map((member) => (
-                                      <tr
-                                        key={member.id}
-                                        className={`hover:bg-[#E7F3FF]/50 cursor-pointer ${
-                                          selectedRoomMembers.has(member.id) ? 'bg-[#E7F3FF]' : ''
-                                        }`}
-                                      >
-                                        <td className="py-2">
-                                          <input
-                                            type="checkbox"
-                                            checked={selectedRoomMembers.has(member.id)}
-                                            onChange={() => toggleRoomMemberSelection(member.id)}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="w-4 h-4 rounded border-[#DADDE1] text-[#1877F2] focus:ring-[#1877F2]"
-                                          />
-                                        </td>
-                                        <td
-                                          className="py-2 text-sm font-semibold text-[#050505]"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            navigate(`/participant/${member.id}`)
-                                          }}
-                                        >
-                                          {member.name}
-                                        </td>
-                                        <td className="py-2 text-sm text-[#65676B]">
-                                          {member.email}
-                                        </td>
-                                        <td className="py-2 text-sm text-[#65676B]">
-                                          {member.phoneNumber || '-'}
-                                        </td>
-                                        <td className="py-2">
-                                          {getCheckInStatus(member) === 'checked-in' ? (
-                                            <span className="px-2 py-1 bg-[#EFFFF6] text-[#31A24C] rounded-md text-xs font-semibold">
-                                              Checked In
-                                            </span>
-                                          ) : (
-                                            <span className="px-2 py-1 bg-[#F0F2F5] text-[#65676B] rounded-md text-xs font-semibold">
-                                              Not Checked In
-                                            </span>
-                                          )}
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
+                              <MemberSelectionTable
+                                members={members}
+                                selectedIds={selectedRoomMembers}
+                                onToggle={toggleRoomMemberSelection}
+                                onToggleAll={() => {
+                                  if (members.every((m) => selectedRoomMembers.has(m.id))) {
+                                    setSelectedRoomMembers(new Set())
+                                  } else {
+                                    setSelectedRoomMembers(new Set(members.map((m) => m.id)))
+                                  }
+                                }}
+                                onNavigate={(id) => navigate(`/participant/${id}`)}
+                                onClearSelection={() => setSelectedRoomMembers(new Set())}
+                                onMoveAction={() => {
+                                  setMoveError(null)
+                                  setShowMoveToRoomModal(true)
+                                }}
+                                moveActionLabel="Move to Another Room"
+                              />
                             ) : (
                               <div className="ml-6 py-2 text-sm text-[#65676B]">
                                 No one assigned to this room
@@ -816,103 +550,29 @@ function ParticipantsListPage(): React.ReactElement {
       )}
 
       {showMoveToRoomModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6 border border-[#DADDE1]">
-            <h3 className="text-xl font-bold text-[#050505] mb-4">
-              Move {selectedRoomMembers.size} participant(s) to another room
-            </h3>
-
-            {moveError && (
-              <div className="mb-4 p-3 bg-[#FFEBEE] border border-[#FFCDD2] text-[#FA383E] rounded-md text-sm">
-                {moveError}
-              </div>
-            )}
-
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-              {rooms
-                .filter((r) => r.id !== expandedRoomId)
-                .map((room) => {
-                  const available = room.maxCapacity - room.currentOccupancy
-                  const canFit = available >= selectedRoomMembers.size
-                  return (
-                    <button
-                      key={room.id}
-                      onClick={() => handleMoveToRoom(room)}
-                      disabled={!canFit || isMoving}
-                      className={`w-full p-3 rounded-lg border text-left transition-all ${
-                        canFit
-                          ? 'border-[#DADDE1] hover:bg-[#F0F2F5]'
-                          : 'border-gray-100 bg-[#F0F2F5] opacity-50 cursor-not-allowed'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold text-[#050505]">Room {room.roomNumber}</span>
-                        <span className={`text-sm ${canFit ? 'text-[#31A24C]' : 'text-[#FA383E]'}`}>
-                          {available} available
-                        </span>
-                      </div>
-                    </button>
-                  )
-                })}
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setShowMoveToRoomModal(false)}
-                disabled={isMoving}
-                className="px-4 py-2 bg-[#E4E6EB] text-[#050505] rounded-md hover:bg-[#D8DADF] font-semibold"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <MoveToModal
+          type="room"
+          selectedCount={selectedRoomMembers.size}
+          items={rooms}
+          currentId={expandedRoomId}
+          isMoving={isMoving}
+          error={moveError}
+          onMove={handleMoveToRoom}
+          onClose={() => setShowMoveToRoomModal(false)}
+        />
       )}
 
       {showMoveToGroupModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6 border border-[#DADDE1]">
-            <h3 className="text-xl font-bold text-[#050505] mb-4">
-              Move {selectedGroupMembers.size} participant(s) to another group
-            </h3>
-
-            {moveError && (
-              <div className="mb-4 p-3 bg-[#FFEBEE] border border-[#FFCDD2] text-[#FA383E] rounded-md text-sm">
-                {moveError}
-              </div>
-            )}
-
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-              {groups
-                .filter((g) => g.id !== expandedGroupId)
-                .map((group) => (
-                  <button
-                    key={group.id}
-                    onClick={() => handleMoveToGroup(group)}
-                    disabled={isMoving}
-                    className="w-full p-3 rounded-lg border border-[#DADDE1] text-left hover:bg-[#F0F2F5] transition-all"
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold text-[#050505]">{group.name}</span>
-                      <span className="text-sm text-[#65676B]">
-                        {group.participantCount} members
-                      </span>
-                    </div>
-                  </button>
-                ))}
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setShowMoveToGroupModal(false)}
-                disabled={isMoving}
-                className="px-4 py-2 bg-[#E4E6EB] text-[#050505] rounded-md hover:bg-[#D8DADF] font-semibold"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <MoveToModal
+          type="group"
+          selectedCount={selectedGroupMembers.size}
+          items={groups}
+          currentId={expandedGroupId}
+          isMoving={isMoving}
+          error={moveError}
+          onMove={handleMoveToGroup}
+          onClose={() => setShowMoveToGroupModal(false)}
+        />
       )}
     </div>
   )

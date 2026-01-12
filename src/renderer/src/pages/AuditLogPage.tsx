@@ -2,22 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { readAuditLogs, clearAuditLogs, AuditLogEntry } from '../services/auditLog'
 import { useSetAtom } from 'jotai'
 import { addToastAtom } from '../stores/toastStore'
-
-const ACTION_LABELS: Record<AuditLogEntry['action'], string> = {
-  create: 'Created',
-  update: 'Updated',
-  delete: 'Deleted',
-  check_in: 'Checked In',
-  check_out: 'Checked Out',
-  assign: 'Assigned',
-  import: 'Imported'
-}
-
-const TARGET_LABELS: Record<AuditLogEntry['targetType'], string> = {
-  participant: 'Participant',
-  group: 'Group',
-  room: 'Room'
-}
+import { AuditAction, TargetType, AUDIT_ACTION_LABELS, TARGET_TYPE_LABELS } from '../types'
 
 function AuditLogPage(): React.ReactElement {
   const [logs, setLogs] = useState<AuditLogEntry[]>([])
@@ -57,6 +42,14 @@ function AuditLogPage(): React.ReactElement {
       dateStyle: 'medium',
       timeStyle: 'short'
     }).format(new Date(timestamp))
+  }
+
+  const getActionLabel = (action: AuditLogEntry['action']): string => {
+    return AUDIT_ACTION_LABELS[action as AuditAction] || action
+  }
+
+  const getTargetTypeLabel = (targetType: AuditLogEntry['targetType']): string => {
+    return TARGET_TYPE_LABELS[targetType as TargetType] || targetType
   }
 
   const filteredLogs = filter === 'all' ? logs : logs.filter((log) => log.targetType === filter)
@@ -135,12 +128,14 @@ function AuditLogPage(): React.ReactElement {
                   <td className="px-4 py-3 text-sm font-medium text-[#050505]">{log.userName}</td>
                   <td className="px-4 py-3">
                     <span className="px-2 py-1 bg-[#E7F3FF] text-[#1877F2] rounded text-xs font-semibold">
-                      {ACTION_LABELS[log.action]}
+                      {getActionLabel(log.action)}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="text-sm font-medium text-[#050505]">{log.targetName}</div>
-                    <div className="text-xs text-[#65676B]">{TARGET_LABELS[log.targetType]}</div>
+                    <div className="text-xs text-[#65676B]">
+                      {getTargetTypeLabel(log.targetType)}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-[#65676B]">
                     {log.changes && Object.keys(log.changes).length > 0 ? (
