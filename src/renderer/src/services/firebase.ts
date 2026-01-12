@@ -14,7 +14,9 @@ import {
   writeBatch,
   increment,
   limit,
-  Firestore
+  Firestore,
+  onSnapshot,
+  Unsubscribe
 } from 'firebase/firestore'
 import type { Participant, Group, Room, CheckInRecord, CSVParticipantRow } from '../types'
 
@@ -169,6 +171,84 @@ export const getAllParticipants = async (): Promise<Participant[]> => {
       updatedAt: convertTimestamp(data.updatedAt)
     } as Participant
   })
+}
+
+export interface CreateParticipantData {
+  name: string
+  email: string
+  gender?: string
+  age?: number
+  stake?: string
+  ward?: string
+  phoneNumber?: string
+  groupId?: string
+  groupName?: string
+  roomId?: string
+  roomNumber?: string
+}
+
+export const addParticipant = async (data: CreateParticipantData): Promise<Participant> => {
+  const participantsRef = collection(getDb(), PARTICIPANTS_COLLECTION)
+
+  // Check if email already exists
+  const q = query(participantsRef, where('email', '==', data.email), limit(1))
+  const snapshot = await getDocs(q)
+
+  if (!snapshot.empty) {
+    throw new Error('A participant with this email already exists')
+  }
+
+  const now = Timestamp.now()
+  const newParticipantRef = doc(participantsRef)
+
+  const participantData = {
+    name: data.name,
+    email: data.email,
+    gender: data.gender || '',
+    age: data.age || 0,
+    stake: data.stake || '',
+    ward: data.ward || '',
+    phoneNumber: data.phoneNumber || '',
+    groupId: data.groupId || null,
+    groupName: data.groupName || null,
+    roomId: data.roomId || null,
+    roomNumber: data.roomNumber || null,
+    checkIns: [],
+    createdAt: now,
+    updatedAt: now
+  }
+
+  await setDoc(newParticipantRef, participantData)
+
+  // Update group count if assigned
+  if (data.groupId) {
+    const groupRef = doc(getDb(), GROUPS_COLLECTION, data.groupId)
+    await updateDoc(groupRef, {
+      participantCount: increment(1),
+      updatedAt: now
+    })
+  }
+
+  // Update room count if assigned
+  if (data.roomId) {
+    const roomRef = doc(getDb(), ROOMS_COLLECTION, data.roomId)
+    await updateDoc(roomRef, {
+      currentOccupancy: increment(1),
+      updatedAt: now
+    })
+  }
+
+  return {
+    id: newParticipantRef.id,
+    ...participantData,
+    groupId: data.groupId,
+    groupName: data.groupName,
+    roomId: data.roomId,
+    roomNumber: data.roomNumber,
+    checkIns: [],
+    createdAt: now.toDate(),
+    updatedAt: now.toDate()
+  }
 }
 
 export const checkInParticipant = async (participantId: string): Promise<CheckInRecord> => {
@@ -664,6 +744,69 @@ export const moveParticipantsToGroup = async (
   }
 
   await batch.commit()
+}
+
+export type DataListener<T> = (data: T[]) => void
+
+export const subscribeToParticipants = (onData: DataListener<Participant>): Unsubscribe => {
+  const participantsRef = collection(getDb(), PARTICIPANTS_COLLECTION)
+  const q = query(participantsRef, orderBy('name'))
+
+  return onSnapshot(q, (snapshot) => {
+    const participants = snapshot.docs.map((doc) => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        ...data,
+        checkIns: (data.checkIns || []).map(
+          (ci: { id: string; checkInTime: Timestamp; checkOutTime?: Timestamp }) => ({
+            ...ci,
+            checkInTime: convertTimestamp(ci.checkInTime),
+            checkOutTime: ci.checkOutTime ? convertTimestamp(ci.checkOutTime) : undefined
+          })
+        ),
+        createdAt: convertTimestamp(data.createdAt),
+        updatedAt: convertTimestamp(data.updatedAt)
+      } as Participant
+    })
+    onData(participants)
+  })
+}
+
+export const subscribeToGroups = (onData: DataListener<Group>): Unsubscribe => {
+  const groupsRef = collection(getDb(), GROUPS_COLLECTION)
+  const q = query(groupsRef, orderBy('name'))
+
+  return onSnapshot(q, (snapshot) => {
+    const groups = snapshot.docs.map((doc) => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: convertTimestamp(data.createdAt),
+        updatedAt: convertTimestamp(data.updatedAt)
+      } as Group
+    })
+    onData(groups)
+  })
+}
+
+export const subscribeToRooms = (onData: DataListener<Room>): Unsubscribe => {
+  const roomsRef = collection(getDb(), ROOMS_COLLECTION)
+  const q = query(roomsRef, orderBy('roomNumber'))
+
+  return onSnapshot(q, (snapshot) => {
+    const rooms = snapshot.docs.map((doc) => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: convertTimestamp(data.createdAt),
+        updatedAt: convertTimestamp(data.updatedAt)
+      } as Room
+    })
+    onData(rooms)
+  })
 }
 
 export { getDb }

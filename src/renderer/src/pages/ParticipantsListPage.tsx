@@ -1,19 +1,22 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAtomValue, useSetAtom } from 'jotai'
+import { moveParticipantsToRoom, moveParticipantsToGroup } from '../services/firebase'
 import {
-  getAllParticipants,
-  getAllGroups,
-  getAllRooms,
-  moveParticipantsToRoom,
-  moveParticipantsToGroup
-} from '../services/firebase'
+  participantsAtom,
+  groupsAtom,
+  roomsAtom,
+  isLoadingAtom,
+  syncAtom
+} from '../stores/dataStore'
 import type { Participant, Group, Room } from '../types'
 
 function ParticipantsListPage(): React.ReactElement {
-  const [participants, setParticipants] = useState<Participant[]>([])
-  const [groups, setGroups] = useState<Group[]>([])
-  const [rooms, setRooms] = useState<Room[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const participants = useAtomValue(participantsAtom)
+  const groups = useAtomValue(groupsAtom)
+  const rooms = useAtomValue(roomsAtom)
+  const isLoading = useAtomValue(isLoadingAtom)
+  const sync = useSetAtom(syncAtom)
   const [filter, setFilter] = useState('')
   const [activeTab, setActiveTab] = useState<'participants' | 'groups' | 'rooms'>('participants')
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null)
@@ -27,28 +30,6 @@ function ParticipantsListPage(): React.ReactElement {
   const [moveError, setMoveError] = useState<string | null>(null)
 
   const navigate = useNavigate()
-
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    setIsLoading(true)
-    try {
-      const [participantsData, groupsData, roomsData] = await Promise.all([
-        getAllParticipants(),
-        getAllGroups(),
-        getAllRooms()
-      ])
-      setParticipants(participantsData)
-      setGroups(groupsData)
-      setRooms(roomsData)
-    } catch (error) {
-      console.error('Error loading data:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const filteredParticipants = participants.filter((p) => {
     const searchTerm = filter.toLowerCase()
@@ -117,7 +98,7 @@ function ParticipantsListPage(): React.ReactElement {
         targetRoom.id,
         targetRoom.roomNumber
       )
-      await loadData()
+      await sync()
       setSelectedRoomMembers(new Set())
       setShowMoveToRoomModal(false)
     } catch (error) {
@@ -136,7 +117,7 @@ function ParticipantsListPage(): React.ReactElement {
         targetGroup.id,
         targetGroup.name
       )
-      await loadData()
+      await sync()
       setSelectedGroupMembers(new Set())
       setShowMoveToGroupModal(false)
     } catch (error) {
