@@ -19,7 +19,8 @@ export const isSyncingAtom = atom(false)
 export const lastSyncTimeAtom = atom<Date | null>(null)
 
 const unsubscribesAtom = atom<Array<() => void>>([])
-const isSubscribedAtom = atom(false)
+
+let hasShownConnectionToast = false
 
 export const syncAtom = atom(null, async (get, set) => {
   if (!isFirebaseConfigured()) {
@@ -55,9 +56,10 @@ export const syncAtom = atom(null, async (get, set) => {
 })
 
 export const setupRealtimeListenersAtom = atom(null, (get, set) => {
-  if (!isFirebaseConfigured() || get(isSubscribedAtom)) return
+  if (!isFirebaseConfigured()) return
 
-  set(isSubscribedAtom, true)
+  const existingUnsubs = get(unsubscribesAtom)
+  if (existingUnsubs.length > 0) return
 
   try {
     const unsubParticipants = subscribeToParticipants((data) => {
@@ -75,10 +77,13 @@ export const setupRealtimeListenersAtom = atom(null, (get, set) => {
     })
 
     set(unsubscribesAtom, [unsubParticipants, unsubGroups, unsubRooms])
-    set(addToastAtom, { message: 'Connected to database', type: 'info', duration: 2000 })
+
+    if (!hasShownConnectionToast) {
+      hasShownConnectionToast = true
+      set(addToastAtom, { message: 'Connected to database', type: 'info', duration: 2000 })
+    }
   } catch (error) {
     console.error('Error setting up realtime listeners:', error)
-    set(isSubscribedAtom, false)
     set(syncAtom)
   }
 })
@@ -87,5 +92,4 @@ export const cleanupListenersAtom = atom(null, (get, set) => {
   const unsubscribes = get(unsubscribesAtom)
   unsubscribes.forEach((unsub) => unsub())
   set(unsubscribesAtom, [])
-  set(isSubscribedAtom, false)
 })

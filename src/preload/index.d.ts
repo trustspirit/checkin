@@ -19,6 +19,17 @@ interface ImportResult {
   error?: string
 }
 
+interface AuditLogEntry {
+  id: string
+  timestamp: string
+  userName: string
+  action: string
+  targetType: string
+  targetId: string
+  targetName: string
+  changes?: Record<string, { from: unknown; to: unknown }>
+}
+
 declare global {
   interface Window {
     electronAPI: {
@@ -26,6 +37,9 @@ declare global {
       loadConfig: () => Promise<ConfigInfo>
       importAndSaveConfig: () => Promise<ImportResult>
       clearConfig: () => Promise<boolean>
+      writeAuditLog: (entry: AuditLogEntry) => Promise<boolean>
+      readAuditLogs: () => Promise<AuditLogEntry[]>
+      clearAuditLogs: () => Promise<boolean>
     }
   }
 }

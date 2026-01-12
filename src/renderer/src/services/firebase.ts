@@ -7,6 +7,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -187,6 +188,26 @@ export interface CreateParticipantData {
   roomNumber?: string
 }
 
+export interface UpdateParticipantData {
+  name?: string
+  email?: string
+  gender?: string
+  age?: number
+  stake?: string
+  ward?: string
+  phoneNumber?: string
+}
+
+export interface UpdateParticipantData {
+  name?: string
+  email?: string
+  gender?: string
+  age?: number
+  stake?: string
+  ward?: string
+  phoneNumber?: string
+}
+
 export const addParticipant = async (data: CreateParticipantData): Promise<Participant> => {
   const participantsRef = collection(getDb(), PARTICIPANTS_COLLECTION)
 
@@ -249,6 +270,71 @@ export const addParticipant = async (data: CreateParticipantData): Promise<Parti
     createdAt: now.toDate(),
     updatedAt: now.toDate()
   }
+}
+
+export interface UpdateParticipantData {
+  name?: string
+  email?: string
+  gender?: string
+  age?: number
+  stake?: string
+  ward?: string
+  phoneNumber?: string
+}
+
+export const updateParticipant = async (
+  participantId: string,
+  data: UpdateParticipantData
+): Promise<Participant> => {
+  const docRef = doc(getDb(), PARTICIPANTS_COLLECTION, participantId)
+  const docSnap = await getDoc(docRef)
+
+  if (!docSnap.exists()) throw new Error('Participant not found')
+
+  const currentData = docSnap.data()
+
+  if (data.email && data.email !== currentData.email) {
+    const emailQuery = query(
+      collection(getDb(), PARTICIPANTS_COLLECTION),
+      where('email', '==', data.email),
+      limit(1)
+    )
+    const emailSnapshot = await getDocs(emailQuery)
+    if (!emailSnapshot.empty) {
+      throw new Error('Email already exists')
+    }
+  }
+
+  const updateData: Record<string, unknown> = {
+    updatedAt: Timestamp.now()
+  }
+
+  if (data.name !== undefined) updateData.name = data.name
+  if (data.email !== undefined) updateData.email = data.email
+  if (data.gender !== undefined) updateData.gender = data.gender
+  if (data.age !== undefined) updateData.age = data.age
+  if (data.stake !== undefined) updateData.stake = data.stake
+  if (data.ward !== undefined) updateData.ward = data.ward
+  if (data.phoneNumber !== undefined) updateData.phoneNumber = data.phoneNumber
+
+  await updateDoc(docRef, updateData)
+
+  const updatedSnap = await getDoc(docRef)
+  const updatedData = updatedSnap.data()!
+
+  return {
+    id: updatedSnap.id,
+    ...updatedData,
+    checkIns: (updatedData.checkIns || []).map(
+      (ci: { id: string; checkInTime: Timestamp; checkOutTime?: Timestamp }) => ({
+        id: ci.id,
+        checkInTime: ci.checkInTime.toDate(),
+        checkOutTime: ci.checkOutTime?.toDate()
+      })
+    ),
+    createdAt: convertTimestamp(updatedData.createdAt),
+    updatedAt: convertTimestamp(updatedData.updatedAt)
+  } as Participant
 }
 
 export const checkInParticipant = async (participantId: string): Promise<CheckInRecord> => {
@@ -807,6 +893,48 @@ export const subscribeToRooms = (onData: DataListener<Room>): Unsubscribe => {
     })
     onData(rooms)
   })
+}
+
+export const deleteGroup = async (groupId: string): Promise<void> => {
+  const batch = writeBatch(getDb())
+
+  const participantsRef = collection(getDb(), PARTICIPANTS_COLLECTION)
+  const q = query(participantsRef, where('groupId', '==', groupId))
+  const snapshot = await getDocs(q)
+
+  snapshot.docs.forEach((docSnap) => {
+    batch.update(docSnap.ref, {
+      groupId: null,
+      groupName: null,
+      updatedAt: Timestamp.now()
+    })
+  })
+
+  const groupRef = doc(getDb(), GROUPS_COLLECTION, groupId)
+  batch.delete(groupRef)
+
+  await batch.commit()
+}
+
+export const deleteRoom = async (roomId: string): Promise<void> => {
+  const batch = writeBatch(getDb())
+
+  const participantsRef = collection(getDb(), PARTICIPANTS_COLLECTION)
+  const q = query(participantsRef, where('roomId', '==', roomId))
+  const snapshot = await getDocs(q)
+
+  snapshot.docs.forEach((docSnap) => {
+    batch.update(docSnap.ref, {
+      roomId: null,
+      roomNumber: null,
+      updatedAt: Timestamp.now()
+    })
+  })
+
+  const roomRef = doc(getDb(), ROOMS_COLLECTION, roomId)
+  batch.delete(roomRef)
+
+  await batch.commit()
 }
 
 export { getDb }

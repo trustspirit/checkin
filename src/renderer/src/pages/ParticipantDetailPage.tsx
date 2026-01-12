@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { useAtomValue, useSetAtom } from 'jotai'
 import {
   getParticipantById,
   checkInParticipant,
@@ -9,9 +10,23 @@ import {
   assignParticipantToGroup,
   assignParticipantToRoom,
   createOrGetGroup,
-  createOrGetRoom
+  createOrGetRoom,
+  updateParticipant
 } from '../services/firebase'
 import type { Participant, Group, Room, CheckInRecord } from '../types'
+import { addToastAtom } from '../stores/toastStore'
+import { userNameAtom } from '../stores/userStore'
+import { writeAuditLog } from '../services/auditLog'
+
+interface EditFormData {
+  name: string
+  email: string
+  phoneNumber: string
+  gender: string
+  age: string
+  ward: string
+  stake: string
+}
 
 function ParticipantDetailPage(): React.ReactElement {
   const { id } = useParams<{ id: string }>()
@@ -25,6 +40,19 @@ function ParticipantDetailPage(): React.ReactElement {
   const [newGroupName, setNewGroupName] = useState('')
   const [newRoomNumber, setNewRoomNumber] = useState('')
   const [newRoomCapacity, setNewRoomCapacity] = useState(4)
+  const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [editForm, setEditForm] = useState<EditFormData>({
+    name: '',
+    email: '',
+    phoneNumber: '',
+    gender: '',
+    age: '',
+    ward: '',
+    stake: ''
+  })
+  const addToast = useSetAtom(addToastAtom)
+  const userName = useAtomValue(userNameAtom)
 
   const loadData = useCallback(async () => {
     if (!id) return
@@ -54,6 +82,13 @@ function ParticipantDetailPage(): React.ReactElement {
     setIsCheckingIn(true)
     try {
       await checkInParticipant(participant.id)
+      await writeAuditLog(
+        userName || 'Unknown',
+        'check_in',
+        'participant',
+        participant.id,
+        participant.name
+      )
       await loadData()
     } catch (error) {
       console.error('Check-in error:', error)
@@ -66,6 +101,13 @@ function ParticipantDetailPage(): React.ReactElement {
     if (!participant) return
     try {
       await checkOutParticipant(participant.id, checkInId)
+      await writeAuditLog(
+        userName || 'Unknown',
+        'check_out',
+        'participant',
+        participant.id,
+        participant.name
+      )
       await loadData()
     } catch (error) {
       console.error('Check-out error:', error)
@@ -75,7 +117,18 @@ function ParticipantDetailPage(): React.ReactElement {
   const handleGroupAssign = async (group: Group) => {
     if (!participant) return
     try {
+      const oldGroup = participant.groupName
       await assignParticipantToGroup(participant.id, group.id, group.name)
+      await writeAuditLog(
+        userName || 'Unknown',
+        'assign',
+        'participant',
+        participant.id,
+        participant.name,
+        {
+          group: { from: oldGroup || null, to: group.name }
+        }
+      )
       await loadData()
       setShowGroupSelect(false)
     } catch (error) {
@@ -86,8 +139,19 @@ function ParticipantDetailPage(): React.ReactElement {
   const handleNewGroup = async () => {
     if (!newGroupName.trim() || !participant) return
     try {
+      const oldGroup = participant.groupName
       const group = await createOrGetGroup(newGroupName.trim())
       await assignParticipantToGroup(participant.id, group.id, group.name)
+      await writeAuditLog(
+        userName || 'Unknown',
+        'assign',
+        'participant',
+        participant.id,
+        participant.name,
+        {
+          group: { from: oldGroup || null, to: group.name }
+        }
+      )
       await loadData()
       setNewGroupName('')
       setShowGroupSelect(false)
@@ -103,7 +167,18 @@ function ParticipantDetailPage(): React.ReactElement {
       return
     }
     try {
+      const oldRoom = participant.roomNumber
       await assignParticipantToRoom(participant.id, room.id, room.roomNumber)
+      await writeAuditLog(
+        userName || 'Unknown',
+        'assign',
+        'participant',
+        participant.id,
+        participant.name,
+        {
+          room: { from: oldRoom || null, to: room.roomNumber }
+        }
+      )
       await loadData()
       setShowRoomSelect(false)
     } catch (error) {
@@ -114,8 +189,19 @@ function ParticipantDetailPage(): React.ReactElement {
   const handleNewRoom = async () => {
     if (!newRoomNumber.trim() || !participant) return
     try {
+      const oldRoom = participant.roomNumber
       const room = await createOrGetRoom(newRoomNumber.trim(), newRoomCapacity)
       await assignParticipantToRoom(participant.id, room.id, room.roomNumber)
+      await writeAuditLog(
+        userName || 'Unknown',
+        'assign',
+        'participant',
+        participant.id,
+        participant.name,
+        {
+          room: { from: oldRoom || null, to: room.roomNumber }
+        }
+      )
       await loadData()
       setNewRoomNumber('')
       setNewRoomCapacity(4)
@@ -134,6 +220,104 @@ function ParticipantDetailPage(): React.ReactElement {
 
   const getActiveCheckIn = (): CheckInRecord | undefined => {
     return participant?.checkIns.find((ci) => !ci.checkOutTime)
+  }
+
+  const startEditing = () => {
+    if (!participant) return
+    setEditForm({
+      name: participant.name,
+      email: participant.email,
+      phoneNumber: participant.phoneNumber || '',
+      gender: participant.gender || '',
+      age: participant.age?.toString() || '',
+      ward: participant.ward || '',
+      stake: participant.stake || ''
+    })
+    setIsEditing(true)
+  }
+
+  const cancelEditing = () => {
+    setIsEditing(false)
+    setEditForm({
+      name: '',
+      email: '',
+      phoneNumber: '',
+      gender: '',
+      age: '',
+      ward: '',
+      stake: ''
+    })
+  }
+
+  const handleSaveEdit = async () => {
+    if (!participant) return
+    if (!editForm.name.trim() || !editForm.email.trim()) {
+      addToast({ type: 'error', message: 'Name and email are required' })
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const changes: Record<string, { from: unknown; to: unknown }> = {}
+
+      if (editForm.name.trim() !== participant.name) {
+        changes.name = { from: participant.name, to: editForm.name.trim() }
+      }
+      if (editForm.email.trim() !== participant.email) {
+        changes.email = { from: participant.email, to: editForm.email.trim() }
+      }
+      if ((editForm.phoneNumber.trim() || '') !== (participant.phoneNumber || '')) {
+        changes.phoneNumber = {
+          from: participant.phoneNumber || null,
+          to: editForm.phoneNumber.trim() || null
+        }
+      }
+      if ((editForm.gender || '') !== (participant.gender || '')) {
+        changes.gender = { from: participant.gender || null, to: editForm.gender || null }
+      }
+      if ((editForm.age ? parseInt(editForm.age) : null) !== (participant.age || null)) {
+        changes.age = {
+          from: participant.age || null,
+          to: editForm.age ? parseInt(editForm.age) : null
+        }
+      }
+      if ((editForm.ward.trim() || '') !== (participant.ward || '')) {
+        changes.ward = { from: participant.ward || null, to: editForm.ward.trim() || null }
+      }
+      if ((editForm.stake.trim() || '') !== (participant.stake || '')) {
+        changes.stake = { from: participant.stake || null, to: editForm.stake.trim() || null }
+      }
+
+      await updateParticipant(participant.id, {
+        name: editForm.name.trim(),
+        email: editForm.email.trim(),
+        phoneNumber: editForm.phoneNumber.trim() || undefined,
+        gender: editForm.gender || undefined,
+        age: editForm.age ? parseInt(editForm.age) : undefined,
+        ward: editForm.ward.trim() || undefined,
+        stake: editForm.stake.trim() || undefined
+      })
+
+      if (Object.keys(changes).length > 0) {
+        await writeAuditLog(
+          userName || 'Unknown',
+          'update',
+          'participant',
+          participant.id,
+          participant.name,
+          changes
+        )
+      }
+
+      addToast({ type: 'success', message: 'Participant updated successfully' })
+      setIsEditing(false)
+      await loadData()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update participant'
+      addToast({ type: 'error', message })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   if (isLoading) {
@@ -179,17 +363,26 @@ function ParticipantDetailPage(): React.ReactElement {
             </p>
           </div>
           <div className="flex gap-3">
+            {!isEditing && (
+              <button
+                onClick={startEditing}
+                className="px-4 py-2 border border-[#DADDE1] text-[#65676B] rounded-md font-semibold hover:bg-[#F0F2F5] transition-colors"
+              >
+                Edit
+              </button>
+            )}
             {activeCheckIn ? (
               <button
                 onClick={() => handleCheckOut(activeCheckIn.id)}
-                className="px-6 py-2 bg-[#FA383E] text-white rounded-md font-semibold hover:bg-[#D32F2F] transition-colors shadow-sm"
+                disabled={isEditing}
+                className="px-6 py-2 bg-[#FA383E] text-white rounded-md font-semibold hover:bg-[#D32F2F] transition-colors shadow-sm disabled:opacity-50"
               >
                 Check Out
               </button>
             ) : (
               <button
                 onClick={handleCheckIn}
-                disabled={isCheckingIn}
+                disabled={isCheckingIn || isEditing}
                 className="px-6 py-2 bg-[#1877F2] text-white rounded-md font-semibold hover:bg-[#166FE5] transition-colors shadow-sm disabled:opacity-50"
               >
                 {isCheckingIn ? 'Checking in...' : 'Check In'}
@@ -209,49 +402,160 @@ function ParticipantDetailPage(): React.ReactElement {
         )}
 
         <div className="mb-6">
-          <h2 className="text-lg font-bold text-[#050505] mb-4 pb-2 border-b border-[#DADDE1]">
-            Personal Information
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
-              <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
-                Email
+          <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#DADDE1]">
+            <h2 className="text-lg font-bold text-[#050505]">Personal Information</h2>
+            {isEditing && (
+              <div className="flex gap-2">
+                <button
+                  onClick={cancelEditing}
+                  disabled={isSaving}
+                  className="px-4 py-1.5 border border-[#DADDE1] text-[#65676B] rounded-md text-sm font-semibold hover:bg-[#F0F2F5] transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={isSaving}
+                  className="px-4 py-1.5 bg-[#1877F2] text-white rounded-md text-sm font-semibold hover:bg-[#166FE5] transition-colors disabled:opacity-50"
+                >
+                  {isSaving ? 'Saving...' : 'Save'}
+                </button>
               </div>
-              <div className="font-semibold text-[#050505]">{participant.email}</div>
-            </div>
-            <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
-              <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
-                Phone
-              </div>
-              <div className="font-semibold text-[#050505]">{participant.phoneNumber || '-'}</div>
-            </div>
-            <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
-              <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
-                Gender
-              </div>
-              <div className="font-semibold text-[#050505] capitalize">
-                {participant.gender || '-'}
-              </div>
-            </div>
-            <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
-              <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
-                Age
-              </div>
-              <div className="font-semibold text-[#050505]">{participant.age || '-'}</div>
-            </div>
-            <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
-              <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
-                Ward
-              </div>
-              <div className="font-semibold text-[#050505]">{participant.ward || '-'}</div>
-            </div>
-            <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
-              <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
-                Stake
-              </div>
-              <div className="font-semibold text-[#050505]">{participant.stake || '-'}</div>
-            </div>
+            )}
           </div>
+          {isEditing ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-[#DADDE1] rounded-md text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-[#DADDE1] rounded-md text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  value={editForm.phoneNumber}
+                  onChange={(e) => setEditForm({ ...editForm, phoneNumber: e.target.value })}
+                  className="w-full px-3 py-2 border border-[#DADDE1] rounded-md text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
+                  Gender
+                </label>
+                <select
+                  value={editForm.gender}
+                  onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
+                  className="w-full px-3 py-2 border border-[#DADDE1] rounded-md text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
+                >
+                  <option value="">Select...</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
+                  Age
+                </label>
+                <input
+                  type="number"
+                  value={editForm.age}
+                  onChange={(e) => setEditForm({ ...editForm, age: e.target.value })}
+                  min={1}
+                  max={150}
+                  className="w-full px-3 py-2 border border-[#DADDE1] rounded-md text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
+                  Ward
+                </label>
+                <input
+                  type="text"
+                  value={editForm.ward}
+                  onChange={(e) => setEditForm({ ...editForm, ward: e.target.value })}
+                  className="w-full px-3 py-2 border border-[#DADDE1] rounded-md text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
+                  Stake
+                </label>
+                <input
+                  type="text"
+                  value={editForm.stake}
+                  onChange={(e) => setEditForm({ ...editForm, stake: e.target.value })}
+                  className="w-full px-3 py-2 border border-[#DADDE1] rounded-md text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
+                <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
+                  Name
+                </div>
+                <div className="font-semibold text-[#050505]">{participant.name}</div>
+              </div>
+              <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
+                <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
+                  Email
+                </div>
+                <div className="font-semibold text-[#050505]">{participant.email}</div>
+              </div>
+              <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
+                <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
+                  Phone
+                </div>
+                <div className="font-semibold text-[#050505]">{participant.phoneNumber || '-'}</div>
+              </div>
+              <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
+                <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
+                  Gender
+                </div>
+                <div className="font-semibold text-[#050505] capitalize">
+                  {participant.gender || '-'}
+                </div>
+              </div>
+              <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
+                <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
+                  Age
+                </div>
+                <div className="font-semibold text-[#050505]">{participant.age || '-'}</div>
+              </div>
+              <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
+                <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
+                  Ward
+                </div>
+                <div className="font-semibold text-[#050505]">{participant.ward || '-'}</div>
+              </div>
+              <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
+                <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
+                  Stake
+                </div>
+                <div className="font-semibold text-[#050505]">{participant.stake || '-'}</div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mb-6">

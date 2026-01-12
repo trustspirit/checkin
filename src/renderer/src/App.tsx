@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import { useAtomValue, useSetAtom } from 'jotai'
 import HomePage from './pages/HomePage'
@@ -6,8 +6,12 @@ import ParticipantDetailPage from './pages/ParticipantDetailPage'
 import ParticipantsListPage from './pages/ParticipantsListPage'
 import ImportPage from './pages/ImportPage'
 import SettingsPage from './pages/SettingsPage'
+import AuditLogPage from './pages/AuditLogPage'
+import GroupsPage from './pages/GroupsPage'
+import RoomsPage from './pages/RoomsPage'
 import AddParticipantModal from './components/AddParticipantModal'
 import ToastContainer from './components/ToastContainer'
+import UserNameModal from './components/UserNameModal'
 import {
   isSyncingAtom,
   lastSyncTimeAtom,
@@ -15,19 +19,38 @@ import {
   setupRealtimeListenersAtom,
   cleanupListenersAtom
 } from './stores/dataStore'
+import { userNameAtom, setUserNameAtom } from './stores/userStore'
 
 function App(): React.ReactElement {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isManageMenuOpen, setIsManageMenuOpen] = useState(false)
+  const manageMenuRef = useRef<HTMLDivElement>(null)
   const isSyncing = useAtomValue(isSyncingAtom)
   const lastSyncTime = useAtomValue(lastSyncTimeAtom)
   const sync = useSetAtom(syncAtom)
   const setupRealtimeListeners = useSetAtom(setupRealtimeListenersAtom)
   const cleanupListeners = useSetAtom(cleanupListenersAtom)
+  const userName = useAtomValue(userNameAtom)
+  const setUserName = useSetAtom(setUserNameAtom)
 
   useEffect(() => {
     setupRealtimeListeners()
     return () => cleanupListeners()
   }, [setupRealtimeListeners, cleanupListeners])
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (manageMenuRef.current && !manageMenuRef.current.contains(e.target as Node)) {
+        setIsManageMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  if (!userName) {
+    return <UserNameModal onSubmit={setUserName} />
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F0F2F5]">
@@ -63,10 +86,10 @@ function App(): React.ReactElement {
                 } ${isActive ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm' : ''}`
               }
             >
-              All Participants
+              Participants
             </NavLink>
             <NavLink
-              to="/import"
+              to="/groups"
               className={({ isActive }) =>
                 `relative px-4 flex items-center font-medium text-[15px] transition-colors duration-200 ${
                   isActive
@@ -75,11 +98,60 @@ function App(): React.ReactElement {
                 } ${isActive ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm' : ''}`
               }
             >
-              Import CSV
+              Groups
             </NavLink>
+            <NavLink
+              to="/rooms"
+              className={({ isActive }) =>
+                `relative px-4 flex items-center font-medium text-[15px] transition-colors duration-200 ${
+                  isActive
+                    ? 'text-[#1877F2]'
+                    : 'text-[#65676B] hover:bg-[#F2F2F2] rounded-lg mx-0.5'
+                } ${isActive ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm' : ''}`
+              }
+            >
+              Rooms
+            </NavLink>
+            <div className="relative" ref={manageMenuRef}>
+              <button
+                onClick={() => setIsManageMenuOpen(!isManageMenuOpen)}
+                className={`relative px-4 h-14 flex items-center font-medium text-[15px] transition-colors duration-200 text-[#65676B] hover:bg-[#F2F2F2] rounded-lg mx-0.5`}
+              >
+                More
+                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+              {isManageMenuOpen && (
+                <div className="absolute top-full left-0 mt-1 bg-white border border-[#DADDE1] rounded-lg shadow-lg py-1 min-w-[160px] z-50">
+                  <NavLink
+                    to="/import"
+                    onClick={() => setIsManageMenuOpen(false)}
+                    className="block px-4 py-2 text-[#050505] hover:bg-[#F0F2F5] text-sm font-medium"
+                  >
+                    Import CSV
+                  </NavLink>
+                  <NavLink
+                    to="/audit-log"
+                    onClick={() => setIsManageMenuOpen(false)}
+                    className="block px-4 py-2 text-[#050505] hover:bg-[#F0F2F5] text-sm font-medium"
+                  >
+                    Audit Log
+                  </NavLink>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-[#65676B]">
+            <span className="font-medium text-[#050505]">{userName}</span>
+          </span>
           <button
             onClick={sync}
             disabled={isSyncing}
@@ -139,7 +211,10 @@ function App(): React.ReactElement {
           <Route path="/" element={<HomePage />} />
           <Route path="/participant/:id" element={<ParticipantDetailPage />} />
           <Route path="/participants" element={<ParticipantsListPage />} />
+          <Route path="/groups" element={<GroupsPage />} />
+          <Route path="/rooms" element={<RoomsPage />} />
           <Route path="/import" element={<ImportPage />} />
+          <Route path="/audit-log" element={<AuditLogPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>

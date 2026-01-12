@@ -4,6 +4,18 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import fs from 'fs'
 
 const getConfigPathStorePath = () => join(app.getPath('userData'), 'config-path.txt')
+const getAuditLogPath = () => join(app.getPath('userData'), 'audit-log.json')
+
+interface AuditLogEntry {
+  id: string
+  timestamp: string
+  userName: string
+  action: string
+  targetType: string
+  targetId: string
+  targetName: string
+  changes?: Record<string, { from: unknown; to: unknown }>
+}
 
 interface FirebaseConfig {
   apiKey: string
@@ -157,6 +169,49 @@ app.whenReady().then(() => {
       const storePath = getConfigPathStorePath()
       if (fs.existsSync(storePath)) {
         fs.unlinkSync(storePath)
+      }
+      return true
+    } catch {
+      return false
+    }
+  })
+
+  ipcMain.handle('auditLog:write', (_event, entry: AuditLogEntry) => {
+    try {
+      const logPath = getAuditLogPath()
+      let logs: AuditLogEntry[] = []
+
+      if (fs.existsSync(logPath)) {
+        const content = fs.readFileSync(logPath, 'utf-8')
+        logs = JSON.parse(content)
+      }
+
+      logs.push(entry)
+      fs.writeFileSync(logPath, JSON.stringify(logs, null, 2), 'utf-8')
+      return true
+    } catch {
+      return false
+    }
+  })
+
+  ipcMain.handle('auditLog:read', () => {
+    try {
+      const logPath = getAuditLogPath()
+      if (fs.existsSync(logPath)) {
+        const content = fs.readFileSync(logPath, 'utf-8')
+        return JSON.parse(content) as AuditLogEntry[]
+      }
+      return []
+    } catch {
+      return []
+    }
+  })
+
+  ipcMain.handle('auditLog:clear', () => {
+    try {
+      const logPath = getAuditLogPath()
+      if (fs.existsSync(logPath)) {
+        fs.unlinkSync(logPath)
       }
       return true
     } catch {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useAtomValue } from 'jotai'
 import {
   addParticipant,
   getAllGroups,
@@ -7,6 +8,8 @@ import {
   createOrGetRoom
 } from '../services/firebase'
 import type { Group, Room } from '../types'
+import { userNameAtom } from '../stores/userStore'
+import { writeAuditLog } from '../services/auditLog'
 
 interface AddParticipantModalProps {
   isOpen: boolean
@@ -36,6 +39,7 @@ function AddParticipantModal({
   const [rooms, setRooms] = useState<Room[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const userName = useAtomValue(userNameAtom)
 
   useEffect(() => {
     if (isOpen) {
@@ -121,6 +125,14 @@ function AddParticipantModal({
         groupName,
         roomId,
         roomNumber
+      }).then(async (newParticipant) => {
+        await writeAuditLog(
+          userName || 'Unknown',
+          'create',
+          'participant',
+          newParticipant.id,
+          newParticipant.name
+        )
       })
 
       resetForm()

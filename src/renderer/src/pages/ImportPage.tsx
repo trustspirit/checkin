@@ -1,13 +1,17 @@
 import React, { useState } from 'react'
+import { useAtomValue } from 'jotai'
 import Papa from 'papaparse'
 import { importParticipantsFromCSV } from '../services/firebase'
 import type { CSVParticipantRow } from '../types'
+import { userNameAtom } from '../stores/userStore'
+import { writeAuditLog } from '../services/auditLog'
 
 function ImportPage(): React.ReactElement {
   const [isImporting, setIsImporting] = useState(false)
   const [result, setResult] = useState<{ created: number; updated: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<CSVParticipantRow[]>([])
+  const userName = useAtomValue(userNameAtom)
 
   const handleFileSelect = async () => {
     try {
@@ -110,6 +114,15 @@ function ImportPage(): React.ReactElement {
     try {
       const importResult = await importParticipantsFromCSV(preview)
       setResult(importResult)
+
+      await writeAuditLog(
+        userName || 'Unknown',
+        'import',
+        'participant',
+        `batch_${Date.now()}`,
+        `CSV Import (${importResult.created} created, ${importResult.updated} updated)`
+      )
+
       setPreview([])
     } catch (err) {
       setError('Import failed. Please check your Firebase configuration.')
