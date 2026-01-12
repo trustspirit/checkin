@@ -2,7 +2,12 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { searchParticipants } from '../services/firebase'
 import type { Participant } from '../types'
-import { SearchResultsSkeleton } from '../components'
+import { CheckInStatus } from '../types'
+import {
+  SearchResultsSkeleton,
+  CheckInStatusBadge,
+  getCheckInStatusFromParticipant
+} from '../components'
 
 function HomePage(): React.ReactElement {
   const [searchTerm, setSearchTerm] = useState('')
@@ -156,13 +161,43 @@ function HomePage(): React.ReactElement {
                   onClick={() => handleResultClick(participant)}
                   onMouseEnter={() => setSelectedIndex(index)}
                 >
-                  <div className="font-semibold text-[#050505]">{participant.name}</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-[#050505]">{participant.name}</span>
+                      {participant.isPaid ? (
+                        <span className="px-1.5 py-0.5 bg-[#EFFFF6] text-[#31A24C] rounded text-xs font-semibold">
+                          Paid
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 bg-[#FFEBEE] text-[#FA383E] rounded text-xs font-semibold">
+                          Unpaid
+                        </span>
+                      )}
+                    </div>
+                    <CheckInStatusBadge
+                      status={getCheckInStatusFromParticipant(participant.checkIns)}
+                    />
+                  </div>
                   <div className="text-sm text-[#65676B] mt-1">
                     {participant.email} {participant.phoneNumber && `| ${participant.phoneNumber}`}
                   </div>
-                  <div className="text-sm text-[#65676B]">
-                    {participant.ward && `${participant.ward}`}
-                    {participant.stake && `, ${participant.stake}`}
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    {participant.ward && (
+                      <span className="text-sm text-[#65676B]">
+                        {participant.ward}
+                        {participant.stake && `, ${participant.stake}`}
+                      </span>
+                    )}
+                    {participant.groupName && (
+                      <span className="px-2 py-0.5 bg-[#E7F3FF] text-[#1877F2] rounded text-xs font-semibold">
+                        {participant.groupName}
+                      </span>
+                    )}
+                    {participant.roomNumber && (
+                      <span className="px-2 py-0.5 bg-[#F0F2F5] text-[#65676B] rounded text-xs font-semibold">
+                        Room {participant.roomNumber}
+                      </span>
+                    )}
                   </div>
                 </div>
               ))

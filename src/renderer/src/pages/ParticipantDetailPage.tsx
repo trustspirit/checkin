@@ -2,17 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useAtomValue, useSetAtom } from 'jotai'
 import {
-  getParticipantById,
   checkInParticipant,
   checkOutParticipant,
-  getAllGroups,
-  getAllRooms,
   assignParticipantToGroup,
   assignParticipantToRoom,
   createOrGetGroup,
   createOrGetRoom,
   updateParticipant
 } from '../services/firebase'
+import { participantsAtom, groupsAtom, roomsAtom, syncAtom } from '../stores/dataStore'
 import type { Participant, Group, Room, CheckInRecord } from '../types'
 import { addToastAtom } from '../stores/toastStore'
 import { userNameAtom } from '../stores/userStore'
@@ -27,13 +25,19 @@ interface EditFormData {
   age: string
   ward: string
   stake: string
+  isPaid: boolean
+  memo: string
 }
 
 function ParticipantDetailPage(): React.ReactElement {
   const { id } = useParams<{ id: string }>()
-  const [participant, setParticipant] = useState<Participant | null>(null)
-  const [groups, setGroups] = useState<Group[]>([])
-  const [rooms, setRooms] = useState<Room[]>([])
+  const participants = useAtomValue(participantsAtom)
+  const groups = useAtomValue(groupsAtom)
+  const rooms = useAtomValue(roomsAtom)
+  const sync = useSetAtom(syncAtom)
+  const addToast = useSetAtom(addToastAtom)
+  const userName = useAtomValue(userNameAtom)
+
   const [isLoading, setIsLoading] = useState(true)
   const [isCheckingIn, setIsCheckingIn] = useState(false)
   const [showGroupSelect, setShowGroupSelect] = useState(false)
@@ -50,33 +54,21 @@ function ParticipantDetailPage(): React.ReactElement {
     gender: '',
     age: '',
     ward: '',
-    stake: ''
+    stake: '',
+    isPaid: false,
+    memo: ''
   })
-  const addToast = useSetAtom(addToastAtom)
-  const userName = useAtomValue(userNameAtom)
-
-  const loadData = useCallback(async () => {
-    if (!id) return
-    setIsLoading(true)
-    try {
-      const [participantData, groupsData, roomsData] = await Promise.all([
-        getParticipantById(id),
-        getAllGroups(),
-        getAllRooms()
-      ])
-      setParticipant(participantData)
-      setGroups(groupsData)
-      setRooms(roomsData)
-    } catch (error) {
-      console.error('Error loading data:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [id])
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    const init = async () => {
+      setIsLoading(true)
+      await sync()
+      setIsLoading(false)
+    }
+    init()
+  }, [sync])
+
+  const participant = participants.find((p) => p.id === id) || null
 
   const handleCheckIn = async () => {
     if (!participant) return
@@ -90,7 +82,7 @@ function ParticipantDetailPage(): React.ReactElement {
         participant.id,
         participant.name
       )
-      await loadData()
+      await sync()
     } catch (error) {
       console.error('Check-in error:', error)
     } finally {
@@ -109,7 +101,7 @@ function ParticipantDetailPage(): React.ReactElement {
         participant.id,
         participant.name
       )
-      await loadData()
+      await sync()
     } catch (error) {
       console.error('Check-out error:', error)
     }
@@ -130,7 +122,7 @@ function ParticipantDetailPage(): React.ReactElement {
           group: { from: oldGroup || null, to: group.name }
         }
       )
-      await loadData()
+      await sync()
       setShowGroupSelect(false)
     } catch (error) {
       console.error('Group assignment error:', error)
@@ -153,7 +145,7 @@ function ParticipantDetailPage(): React.ReactElement {
           group: { from: oldGroup || null, to: group.name }
         }
       )
-      await loadData()
+      await sync()
       setNewGroupName('')
       setShowGroupSelect(false)
     } catch (error) {
@@ -180,7 +172,7 @@ function ParticipantDetailPage(): React.ReactElement {
           room: { from: oldRoom || null, to: room.roomNumber }
         }
       )
-      await loadData()
+      await sync()
       setShowRoomSelect(false)
     } catch (error) {
       console.error('Room assignment error:', error)
@@ -203,7 +195,7 @@ function ParticipantDetailPage(): React.ReactElement {
           room: { from: oldRoom || null, to: room.roomNumber }
         }
       )
-      await loadData()
+      await sync()
       setNewRoomNumber('')
       setNewRoomCapacity(4)
       setShowRoomSelect(false)
@@ -232,7 +224,9 @@ function ParticipantDetailPage(): React.ReactElement {
       gender: participant.gender || '',
       age: participant.age?.toString() || '',
       ward: participant.ward || '',
-      stake: participant.stake || ''
+      stake: participant.stake || '',
+      isPaid: participant.isPaid,
+      memo: participant.memo || ''
     })
     setIsEditing(true)
   }
@@ -246,7 +240,9 @@ function ParticipantDetailPage(): React.ReactElement {
       gender: '',
       age: '',
       ward: '',
-      stake: ''
+      stake: '',
+      isPaid: false,
+      memo: ''
     })
   }
 
@@ -288,6 +284,12 @@ function ParticipantDetailPage(): React.ReactElement {
       if ((editForm.stake.trim() || '') !== (participant.stake || '')) {
         changes.stake = { from: participant.stake || null, to: editForm.stake.trim() || null }
       }
+      if (editForm.isPaid !== participant.isPaid) {
+        changes.isPaid = { from: participant.isPaid, to: editForm.isPaid }
+      }
+      if ((editForm.memo.trim() || '') !== (participant.memo || '')) {
+        changes.memo = { from: participant.memo || null, to: editForm.memo.trim() || null }
+      }
 
       await updateParticipant(participant.id, {
         name: editForm.name.trim(),
@@ -296,7 +298,9 @@ function ParticipantDetailPage(): React.ReactElement {
         gender: editForm.gender || undefined,
         age: editForm.age ? parseInt(editForm.age) : undefined,
         ward: editForm.ward.trim() || undefined,
-        stake: editForm.stake.trim() || undefined
+        stake: editForm.stake.trim() || undefined,
+        isPaid: editForm.isPaid,
+        memo: editForm.memo.trim() || undefined
       })
 
       if (Object.keys(changes).length > 0) {
@@ -312,7 +316,7 @@ function ParticipantDetailPage(): React.ReactElement {
 
       addToast({ type: 'success', message: 'Participant updated successfully' })
       setIsEditing(false)
-      await loadData()
+      await sync()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to update participant'
       addToast({ type: 'error', message })
@@ -516,6 +520,34 @@ function ParticipantDetailPage(): React.ReactElement {
                   className="w-full px-3 py-2 border border-[#DADDE1] rounded-md text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
                 />
               </div>
+              <div>
+                <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
+                  Payment Status
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setEditForm({ ...editForm, isPaid: !editForm.isPaid })}
+                  className={`w-full px-3 py-2 rounded-md text-sm font-semibold transition-colors ${
+                    editForm.isPaid
+                      ? 'bg-[#EFFFF6] text-[#31A24C] border border-[#31A24C]'
+                      : 'bg-[#FFEBEE] text-[#FA383E] border border-[#FA383E]'
+                  }`}
+                >
+                  {editForm.isPaid ? 'Paid' : 'Unpaid'}
+                </button>
+              </div>
+              <div className="col-span-2 md:col-span-3">
+                <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
+                  Memo
+                </label>
+                <textarea
+                  value={editForm.memo}
+                  onChange={(e) => setEditForm({ ...editForm, memo: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-[#DADDE1] rounded-md text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent resize-none"
+                  placeholder="Add notes about this participant..."
+                />
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -563,6 +595,32 @@ function ParticipantDetailPage(): React.ReactElement {
                 </div>
                 <div className="font-semibold text-[#050505]">{participant.stake || '-'}</div>
               </div>
+              <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
+                <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
+                  Payment Status
+                </div>
+                <div>
+                  {participant.isPaid ? (
+                    <span className="px-2 py-1 bg-[#EFFFF6] text-[#31A24C] rounded text-sm font-semibold">
+                      Paid
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 bg-[#FFEBEE] text-[#FA383E] rounded text-sm font-semibold">
+                      Unpaid
+                    </span>
+                  )}
+                </div>
+              </div>
+              {participant.memo && (
+                <div className="col-span-2 md:col-span-3 bg-[#F0F2F5] rounded-md p-3 border border-transparent">
+                  <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
+                    Memo
+                  </div>
+                  <div className="font-semibold text-[#050505] whitespace-pre-wrap">
+                    {participant.memo}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

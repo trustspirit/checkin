@@ -22,7 +22,15 @@ import {
   DocumentSnapshot,
   QueryDocumentSnapshot
 } from 'firebase/firestore'
-import type { Participant, Group, Room, CheckInRecord, CSVParticipantRow } from '../types'
+import type {
+  Participant,
+  Group,
+  Room,
+  CheckInRecord,
+  CSVParticipantRow,
+  SortField,
+  SortDirection
+} from '../types'
 
 interface FirebaseConfig {
   apiKey: string
@@ -193,6 +201,8 @@ const parseParticipantDoc = (doc: QueryDocumentSnapshot): Participant => {
   return {
     id: doc.id,
     ...data,
+    isPaid: data.isPaid ?? false,
+    memo: data.memo || '',
     checkIns: (data.checkIns || []).map(
       (ci: { id: string; checkInTime: Timestamp; checkOutTime?: Timestamp }) => ({
         ...ci,
@@ -259,7 +269,9 @@ export const searchParticipantsPaginated = async (
   searchTerm: string,
   checkInStatus: 'all' | 'checked-in' | 'not-checked-in' = 'all',
   pageSize: number = 100,
-  loadedIds: Set<string> = new Set()
+  loadedIds: Set<string> = new Set(),
+  sortField: SortField | null = null,
+  sortDirection: SortDirection = 'asc'
 ): Promise<{ data: Participant[]; hasMore: boolean }> => {
   const participantsRef = collection(getDb(), PARTICIPANTS_COLLECTION)
   const q = query(participantsRef, orderBy('name'))
@@ -286,6 +298,48 @@ export const searchParticipantsPaginated = async (
     })
   }
 
+  if (sortField) {
+    participants.sort((a, b) => {
+      let aValue: string | number = ''
+      let bValue: string | number = ''
+
+      switch (sortField) {
+        case 'name':
+          aValue = a.name.toLowerCase()
+          bValue = b.name.toLowerCase()
+          break
+        case 'ward':
+          aValue = (a.ward || '').toLowerCase()
+          bValue = (b.ward || '').toLowerCase()
+          break
+        case 'group':
+          aValue = (a.groupName || '').toLowerCase()
+          bValue = (b.groupName || '').toLowerCase()
+          break
+        case 'room':
+          aValue = a.roomNumber || ''
+          bValue = b.roomNumber || ''
+          break
+        case 'status':
+          aValue = isCheckedIn(a) ? 0 : 1
+          bValue = isCheckedIn(b) ? 0 : 1
+          break
+        case 'payment':
+          aValue = a.isPaid ? 0 : 1
+          bValue = b.isPaid ? 0 : 1
+          break
+      }
+
+      if (aValue === '' && bValue !== '') return 1
+      if (aValue !== '' && bValue === '') return -1
+      if (aValue === '' && bValue === '') return 0
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+  }
+
   const notLoaded = participants.filter((p) => !loadedIds.has(p.id))
   const pageData = notLoaded.slice(0, pageSize)
   const hasMore = notLoaded.length > pageSize
@@ -301,6 +355,8 @@ export interface CreateParticipantData {
   stake?: string
   ward?: string
   phoneNumber?: string
+  isPaid?: boolean
+  memo?: string
   groupId?: string
   groupName?: string
   roomId?: string
@@ -315,16 +371,8 @@ export interface UpdateParticipantData {
   stake?: string
   ward?: string
   phoneNumber?: string
-}
-
-export interface UpdateParticipantData {
-  name?: string
-  email?: string
-  gender?: string
-  age?: number
-  stake?: string
-  ward?: string
-  phoneNumber?: string
+  isPaid?: boolean
+  memo?: string
 }
 
 export const addParticipant = async (data: CreateParticipantData): Promise<Participant> => {
@@ -349,6 +397,8 @@ export const addParticipant = async (data: CreateParticipantData): Promise<Parti
     stake: data.stake || '',
     ward: data.ward || '',
     phoneNumber: data.phoneNumber || '',
+    isPaid: data.isPaid ?? false,
+    memo: data.memo || '',
     groupId: data.groupId || null,
     groupName: data.groupName || null,
     roomId: data.roomId || null,
@@ -389,16 +439,6 @@ export const addParticipant = async (data: CreateParticipantData): Promise<Parti
     createdAt: now.toDate(),
     updatedAt: now.toDate()
   }
-}
-
-export interface UpdateParticipantData {
-  name?: string
-  email?: string
-  gender?: string
-  age?: number
-  stake?: string
-  ward?: string
-  phoneNumber?: string
 }
 
 export const updateParticipant = async (

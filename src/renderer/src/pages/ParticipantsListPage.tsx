@@ -13,7 +13,15 @@ import {
   isLoadingAtom,
   syncAtom
 } from '../stores/dataStore'
-import type { Participant, Group, Room, CheckInFilter, TabType } from '../types'
+import type {
+  Participant,
+  Group,
+  Room,
+  CheckInFilter,
+  TabType,
+  SortField,
+  SortDirection
+} from '../types'
 import { CheckInStatus } from '../types'
 import {
   TabBar,
@@ -56,6 +64,9 @@ function ParticipantsListPage(): React.ReactElement {
   const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null)
   const [hoveredRoomId, setHoveredRoomId] = useState<string | null>(null)
 
+  const [sortField, setSortField] = useState<SortField | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -67,6 +78,44 @@ function ParticipantsListPage(): React.ReactElement {
   ).length
   const notCheckedInCount = allParticipants.length - checkedInCount
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  const handleResetSort = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSortField(null)
+    setSortDirection('asc')
+  }
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <th
+      onClick={() => handleSort(field)}
+      className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide cursor-pointer hover:bg-[#E4E6EB] transition-colors select-none"
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortField === field && (
+          <>
+            <span className="text-[10px]">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+            <button
+              onClick={handleResetSort}
+              className="ml-1 text-[#65676B] hover:text-[#050505] text-xs font-bold"
+              title="Clear sort"
+            >
+              ×
+            </button>
+          </>
+        )}
+      </div>
+    </th>
+  )
+
   const loadParticipants = useCallback(
     async (reset: boolean = false) => {
       setIsSearching(true)
@@ -74,7 +123,14 @@ function ParticipantsListPage(): React.ReactElement {
         const loadedIds = reset
           ? new Set<string>()
           : new Set(displayedParticipants.map((p) => p.id))
-        const result = await searchParticipantsPaginated(filter, checkInFilter, pageSize, loadedIds)
+        const result = await searchParticipantsPaginated(
+          filter,
+          checkInFilter,
+          pageSize,
+          loadedIds,
+          sortField,
+          sortDirection
+        )
 
         if (reset) {
           setDisplayedParticipants(result.data)
@@ -89,7 +145,7 @@ function ParticipantsListPage(): React.ReactElement {
         setIsSearching(false)
       }
     },
-    [filter, checkInFilter, displayedParticipants]
+    [filter, checkInFilter, displayedParticipants, sortField, sortDirection]
   )
 
   useEffect(() => {
@@ -105,7 +161,13 @@ function ParticipantsListPage(): React.ReactElement {
         clearTimeout(searchTimeoutRef.current)
       }
     }
-  }, [filter, checkInFilter])
+  }, [filter, checkInFilter, sortField, sortDirection])
+
+  useEffect(() => {
+    if (hasInitiallyLoaded) {
+      loadParticipants(true)
+    }
+  }, [allParticipants])
 
   useEffect(() => {
     if (!loadMoreRef.current || !hasMore || isSearching) return
@@ -255,27 +317,18 @@ function ParticipantsListPage(): React.ReactElement {
             <table className="w-full">
               <thead>
                 <tr className="bg-[#F0F2F5] border-b border-[#DADDE1]">
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
-                    Name
-                  </th>
+                  <SortableHeader field="name">Name</SortableHeader>
                   <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
                     Email
                   </th>
                   <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
                     Phone
                   </th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
-                    Ward
-                  </th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
-                    Group
-                  </th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
-                    Room
-                  </th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
-                    Status
-                  </th>
+                  <SortableHeader field="ward">Ward</SortableHeader>
+                  <SortableHeader field="group">Group</SortableHeader>
+                  <SortableHeader field="room">Room</SortableHeader>
+                  <SortableHeader field="payment">Payment</SortableHeader>
+                  <SortableHeader field="status">Status</SortableHeader>
                 </tr>
               </thead>
               <tbody>
@@ -305,6 +358,17 @@ function ParticipantsListPage(): React.ReactElement {
                         </span>
                       ) : (
                         <span className="text-gray-300">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {participant.isPaid ? (
+                        <span className="px-2 py-1 bg-[#EFFFF6] text-[#31A24C] rounded-md text-sm font-semibold">
+                          Paid
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 bg-[#FFEBEE] text-[#FA383E] rounded-md text-sm font-semibold">
+                          Unpaid
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3">

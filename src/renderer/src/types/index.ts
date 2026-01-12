@@ -6,6 +6,9 @@ export type CheckInFilter = 'all' | 'checked-in' | 'not-checked-in'
 
 export type TabType = 'participants' | 'groups' | 'rooms'
 
+export type SortField = 'name' | 'ward' | 'group' | 'room' | 'status' | 'payment'
+export type SortDirection = 'asc' | 'desc'
+
 export interface Participant {
   id: string
   name: string
@@ -15,6 +18,8 @@ export interface Participant {
   ward: string
   phoneNumber: string
   email: string
+  isPaid: boolean
+  memo?: string
   metadata?: Record<string, unknown>
   groupId?: string
   groupName?: string
