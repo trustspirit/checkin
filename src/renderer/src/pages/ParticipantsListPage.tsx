@@ -11,6 +11,8 @@ import {
 } from '../stores/dataStore'
 import type { Participant, Group, Room } from '../types'
 
+type CheckInFilter = 'all' | 'checked-in' | 'not-checked-in'
+
 function ParticipantsListPage(): React.ReactElement {
   const participants = useAtomValue(participantsAtom)
   const groups = useAtomValue(groupsAtom)
@@ -18,6 +20,7 @@ function ParticipantsListPage(): React.ReactElement {
   const isLoading = useAtomValue(isLoadingAtom)
   const sync = useSetAtom(syncAtom)
   const [filter, setFilter] = useState('')
+  const [checkInFilter, setCheckInFilter] = useState<CheckInFilter>('all')
   const [activeTab, setActiveTab] = useState<'participants' | 'groups' | 'rooms'>('participants')
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null)
   const [expandedRoomId, setExpandedRoomId] = useState<string | null>(null)
@@ -31,21 +34,28 @@ function ParticipantsListPage(): React.ReactElement {
 
   const navigate = useNavigate()
 
+  const getCheckInStatus = (participant: Participant) => {
+    const activeCheckIn = participant.checkIns.find((ci) => !ci.checkOutTime)
+    return activeCheckIn ? 'checked-in' : 'not-checked-in'
+  }
+
+  const checkedInCount = participants.filter((p) => getCheckInStatus(p) === 'checked-in').length
+  const notCheckedInCount = participants.length - checkedInCount
+
   const filteredParticipants = participants.filter((p) => {
     const searchTerm = filter.toLowerCase()
-    return (
+    const matchesSearch =
       p.name.toLowerCase().includes(searchTerm) ||
       p.email.toLowerCase().includes(searchTerm) ||
       p.phoneNumber?.toLowerCase().includes(searchTerm) ||
       p.ward?.toLowerCase().includes(searchTerm) ||
       p.stake?.toLowerCase().includes(searchTerm)
-    )
-  })
 
-  const getCheckInStatus = (participant: Participant) => {
-    const activeCheckIn = participant.checkIns.find((ci) => !ci.checkOutTime)
-    return activeCheckIn ? 'checked-in' : 'not-checked-in'
-  }
+    if (!matchesSearch) return false
+
+    if (checkInFilter === 'all') return true
+    return getCheckInStatus(p) === checkInFilter
+  })
 
   const getGroupMembers = (groupId: string) => {
     return participants.filter((p) => p.groupId === groupId)
@@ -178,13 +188,49 @@ function ParticipantsListPage(): React.ReactElement {
       {activeTab === 'participants' && (
         <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm">
           <div className="p-4 border-b border-[#DADDE1]">
-            <input
-              type="text"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              placeholder="Filter participants..."
-              className="w-full md:w-80 px-4 py-2 bg-[#F0F2F5] border-none rounded-full outline-none focus:ring-2 focus:ring-[#1877F2] placeholder-[#65676B]"
-            />
+            <div className="flex flex-col md:flex-row gap-4">
+              <input
+                type="text"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder="Filter participants..."
+                className="flex-1 md:max-w-80 px-4 py-2 bg-[#F0F2F5] border-none rounded-full outline-none focus:ring-2 focus:ring-[#1877F2] placeholder-[#65676B]"
+              />
+              <div className="flex items-center gap-2">
+                <div className="flex bg-[#F0F2F5] rounded-lg p-1">
+                  <button
+                    onClick={() => setCheckInFilter('all')}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      checkInFilter === 'all'
+                        ? 'bg-white text-[#050505] shadow-sm'
+                        : 'text-[#65676B] hover:text-[#050505]'
+                    }`}
+                  >
+                    All ({participants.length})
+                  </button>
+                  <button
+                    onClick={() => setCheckInFilter('checked-in')}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      checkInFilter === 'checked-in'
+                        ? 'bg-white text-[#31A24C] shadow-sm'
+                        : 'text-[#65676B] hover:text-[#050505]'
+                    }`}
+                  >
+                    Checked In ({checkedInCount})
+                  </button>
+                  <button
+                    onClick={() => setCheckInFilter('not-checked-in')}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      checkInFilter === 'not-checked-in'
+                        ? 'bg-white text-[#FA383E] shadow-sm'
+                        : 'text-[#65676B] hover:text-[#050505]'
+                    }`}
+                  >
+                    Not Checked In ({notCheckedInCount})
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">

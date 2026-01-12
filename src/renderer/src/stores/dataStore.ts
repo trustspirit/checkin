@@ -22,7 +22,7 @@ const unsubscribesAtom = atom<Array<() => void>>([])
 
 let hasShownConnectionToast = false
 
-export const syncAtom = atom(null, async (get, set) => {
+export const syncAtom = atom(null, async (get, set, showToast: boolean = false) => {
   if (!isFirebaseConfigured()) {
     set(addToastAtom, { message: 'Firebase not configured', type: 'warning' })
     return
@@ -42,7 +42,9 @@ export const syncAtom = atom(null, async (get, set) => {
     set(groupsAtom, groupsData)
     set(roomsAtom, roomsData)
     set(lastSyncTimeAtom, new Date())
-    set(addToastAtom, { message: 'Data synced successfully', type: 'success' })
+    if (showToast) {
+      set(addToastAtom, { message: 'Data synced successfully', type: 'success' })
+    }
   } catch (error) {
     console.error('Sync error:', error)
     set(addToastAtom, {

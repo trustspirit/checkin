@@ -9,6 +9,8 @@ import SettingsPage from './pages/SettingsPage'
 import AuditLogPage from './pages/AuditLogPage'
 import GroupsPage from './pages/GroupsPage'
 import RoomsPage from './pages/RoomsPage'
+import RoomDetailPage from './pages/RoomDetailPage'
+import GroupDetailPage from './pages/GroupDetailPage'
 import AddParticipantModal from './components/AddParticipantModal'
 import ToastContainer from './components/ToastContainer'
 import UserNameModal from './components/UserNameModal'
@@ -153,7 +155,7 @@ function App(): React.ReactElement {
             <span className="font-medium text-[#050505]">{userName}</span>
           </span>
           <button
-            onClick={sync}
+            onClick={() => sync(true)}
             disabled={isSyncing}
             className={`w-10 h-10 flex items-center justify-center rounded-full transition-all duration-200 ${
               isSyncing
@@ -212,7 +214,9 @@ function App(): React.ReactElement {
           <Route path="/participant/:id" element={<ParticipantDetailPage />} />
           <Route path="/participants" element={<ParticipantsListPage />} />
           <Route path="/groups" element={<GroupsPage />} />
+          <Route path="/groups/:id" element={<GroupDetailPage />} />
           <Route path="/rooms" element={<RoomsPage />} />
+          <Route path="/rooms/:id" element={<RoomDetailPage />} />
           <Route path="/import" element={<ImportPage />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
           <Route path="/settings" element={<SettingsPage />} />

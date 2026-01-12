@@ -356,7 +356,19 @@ function ParticipantDetailPage(): React.ReactElement {
       <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm p-6 mb-6">
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-[#050505]">{participant.name}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold text-[#050505]">{participant.name}</h1>
+              {activeCheckIn ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-[#EFFFF6] text-[#31A24C] border border-[#31A24C]/20">
+                  <div className="w-2 h-2 bg-[#31A24C] rounded-full animate-pulse"></div>
+                  Checked In
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-[#F0F2F5] text-[#65676B]">
+                  Not Checked In
+                </span>
+              )}
+            </div>
             <p className="text-[#65676B] mt-1 text-lg">
               {participant.ward && participant.ward}
               {participant.stake && `, ${participant.stake}`}

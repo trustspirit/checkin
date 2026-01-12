@@ -27,6 +27,7 @@ export interface Group {
   id: string
   name: string
   participantCount: number
+  expectedCapacity?: number
   createdAt: Date
   updatedAt: Date
 }

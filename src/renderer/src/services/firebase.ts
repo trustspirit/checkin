@@ -406,7 +406,10 @@ export const getAllGroups = async (): Promise<Group[]> => {
   })
 }
 
-export const createOrGetGroup = async (groupName: string): Promise<Group> => {
+export const createOrGetGroup = async (
+  groupName: string,
+  expectedCapacity?: number
+): Promise<Group> => {
   const groupsRef = collection(getDb(), GROUPS_COLLECTION)
   const q = query(groupsRef, where('name', '==', groupName), limit(1))
   const snapshot = await getDocs(q)
@@ -430,6 +433,7 @@ export const createOrGetGroup = async (groupName: string): Promise<Group> => {
   } = {
     name: groupName,
     participantCount: 0,
+    expectedCapacity: expectedCapacity || undefined,
     createdAt: now,
     updatedAt: now
   }
@@ -916,6 +920,101 @@ export const deleteGroup = async (groupId: string): Promise<void> => {
   await batch.commit()
 }
 
+export const updateGroup = async (
+  groupId: string,
+  data: { name?: string; expectedCapacity?: number | null }
+): Promise<Group> => {
+  const groupRef = doc(getDb(), GROUPS_COLLECTION, groupId)
+  const groupSnap = await getDoc(groupRef)
+
+  if (!groupSnap.exists()) throw new Error('Group not found')
+
+  const currentData = groupSnap.data()
+  const batch = writeBatch(getDb())
+
+  const updateData: Record<string, unknown> = {
+    updatedAt: Timestamp.now()
+  }
+
+  if (data.name !== undefined) {
+    updateData.name = data.name
+  }
+
+  if (data.expectedCapacity !== undefined) {
+    updateData.expectedCapacity = data.expectedCapacity
+  }
+
+  batch.update(groupRef, updateData)
+
+  if (data.name !== undefined && data.name !== currentData.name) {
+    const participantsRef = collection(getDb(), PARTICIPANTS_COLLECTION)
+    const q = query(participantsRef, where('groupId', '==', groupId))
+    const snapshot = await getDocs(q)
+
+    snapshot.docs.forEach((docSnap) => {
+      batch.update(docSnap.ref, {
+        groupName: data.name,
+        updatedAt: Timestamp.now()
+      })
+    })
+  }
+
+  await batch.commit()
+
+  const updatedSnap = await getDoc(groupRef)
+  const updatedData = updatedSnap.data()!
+
+  return {
+    id: updatedSnap.id,
+    ...updatedData,
+    createdAt: convertTimestamp(updatedData.createdAt),
+    updatedAt: convertTimestamp(updatedData.updatedAt)
+  } as Group
+}
+
+export const removeParticipantFromGroup = async (participantId: string): Promise<void> => {
+  const participantRef = doc(getDb(), PARTICIPANTS_COLLECTION, participantId)
+  const participantSnap = await getDoc(participantRef)
+
+  if (!participantSnap.exists()) throw new Error('Participant not found')
+
+  const data = participantSnap.data()
+  const groupId = data.groupId
+
+  if (!groupId) return
+
+  const batch = writeBatch(getDb())
+
+  batch.update(participantRef, {
+    groupId: null,
+    groupName: null,
+    updatedAt: Timestamp.now()
+  })
+
+  const groupRef = doc(getDb(), GROUPS_COLLECTION, groupId)
+  batch.update(groupRef, {
+    participantCount: increment(-1),
+    updatedAt: Timestamp.now()
+  })
+
+  await batch.commit()
+}
+
+export const getGroupById = async (groupId: string): Promise<Group | null> => {
+  const groupRef = doc(getDb(), GROUPS_COLLECTION, groupId)
+  const groupSnap = await getDoc(groupRef)
+
+  if (!groupSnap.exists()) return null
+
+  const data = groupSnap.data()
+  return {
+    id: groupSnap.id,
+    ...data,
+    createdAt: convertTimestamp(data.createdAt),
+    updatedAt: convertTimestamp(data.updatedAt)
+  } as Group
+}
+
 export const deleteRoom = async (roomId: string): Promise<void> => {
   const batch = writeBatch(getDb())
 
@@ -935,6 +1034,103 @@ export const deleteRoom = async (roomId: string): Promise<void> => {
   batch.delete(roomRef)
 
   await batch.commit()
+}
+
+export const updateRoom = async (
+  roomId: string,
+  data: { roomNumber?: string; maxCapacity?: number }
+): Promise<Room> => {
+  const roomRef = doc(getDb(), ROOMS_COLLECTION, roomId)
+  const roomSnap = await getDoc(roomRef)
+
+  if (!roomSnap.exists()) throw new Error('Room not found')
+
+  const currentData = roomSnap.data()
+  const batch = writeBatch(getDb())
+
+  const updateData: Record<string, unknown> = {
+    updatedAt: Timestamp.now()
+  }
+
+  if (data.roomNumber !== undefined) {
+    updateData.roomNumber = data.roomNumber
+  }
+  if (data.maxCapacity !== undefined) {
+    if (data.maxCapacity < currentData.currentOccupancy) {
+      throw new Error('Capacity cannot be less than current occupancy')
+    }
+    updateData.maxCapacity = data.maxCapacity
+  }
+
+  batch.update(roomRef, updateData)
+
+  if (data.roomNumber !== undefined && data.roomNumber !== currentData.roomNumber) {
+    const participantsRef = collection(getDb(), PARTICIPANTS_COLLECTION)
+    const q = query(participantsRef, where('roomId', '==', roomId))
+    const snapshot = await getDocs(q)
+
+    snapshot.docs.forEach((docSnap) => {
+      batch.update(docSnap.ref, {
+        roomNumber: data.roomNumber,
+        updatedAt: Timestamp.now()
+      })
+    })
+  }
+
+  await batch.commit()
+
+  const updatedSnap = await getDoc(roomRef)
+  const updatedData = updatedSnap.data()!
+
+  return {
+    id: updatedSnap.id,
+    ...updatedData,
+    createdAt: convertTimestamp(updatedData.createdAt),
+    updatedAt: convertTimestamp(updatedData.updatedAt)
+  } as Room
+}
+
+export const removeParticipantFromRoom = async (participantId: string): Promise<void> => {
+  const participantRef = doc(getDb(), PARTICIPANTS_COLLECTION, participantId)
+  const participantSnap = await getDoc(participantRef)
+
+  if (!participantSnap.exists()) throw new Error('Participant not found')
+
+  const data = participantSnap.data()
+  const roomId = data.roomId
+
+  if (!roomId) return
+
+  const batch = writeBatch(getDb())
+
+  batch.update(participantRef, {
+    roomId: null,
+    roomNumber: null,
+    updatedAt: Timestamp.now()
+  })
+
+  const roomRef = doc(getDb(), ROOMS_COLLECTION, roomId)
+  batch.update(roomRef, {
+    currentOccupancy: increment(-1),
+    updatedAt: Timestamp.now()
+  })
+
+  await batch.commit()
+}
+
+export const getRoomById = async (roomId: string): Promise<Room | null> => {
+  const roomRef = doc(getDb(), ROOMS_COLLECTION, roomId)
+  const roomSnap = await getDoc(roomRef)
+
+  if (!roomSnap.exists()) return null
+
+  const data = roomSnap.data()
+  return {
+    id: roomSnap.id,
+    ...data,
+    createdAt: convertTimestamp(data.createdAt),
+    updatedAt: convertTimestamp(data.updatedAt)
+  } as Room
 }
 
 export { getDb }
