@@ -12,7 +12,7 @@ import {
   increment,
   limit
 } from 'firebase/firestore'
-import type { Room } from '../../types'
+import type { Room, RoomGenderType, RoomType } from '../../types'
 import { getDb, ROOMS_COLLECTION, PARTICIPANTS_COLLECTION, convertTimestamp } from './config'
 
 export const getAllRooms = async (): Promise<Room[]> => {
@@ -46,12 +46,25 @@ export const getRoomById = async (roomId: string): Promise<Room | null> => {
   } as Room
 }
 
+export interface CreateRoomOptions {
+  roomNumber: string
+  maxCapacity?: number
+  genderType?: RoomGenderType
+  roomType?: RoomType
+}
+
 export const createOrGetRoom = async (
-  roomNumber: string,
+  roomNumberOrOptions: string | CreateRoomOptions,
   maxCapacity: number = 4
 ): Promise<Room> => {
+  // Support both old signature (roomNumber, maxCapacity) and new options object
+  const options: CreateRoomOptions =
+    typeof roomNumberOrOptions === 'string'
+      ? { roomNumber: roomNumberOrOptions, maxCapacity }
+      : roomNumberOrOptions
+
   const roomsRef = collection(getDb(), ROOMS_COLLECTION)
-  const q = query(roomsRef, where('roomNumber', '==', roomNumber), limit(1))
+  const q = query(roomsRef, where('roomNumber', '==', options.roomNumber), limit(1))
   const snapshot = await getDocs(q)
 
   if (!snapshot.empty) {
@@ -67,22 +80,31 @@ export const createOrGetRoom = async (
 
   const newRoomRef = doc(roomsRef)
   const now = Timestamp.now()
-  const newRoom: Omit<Room, 'id' | 'createdAt' | 'updatedAt'> & {
-    createdAt: Timestamp
-    updatedAt: Timestamp
-  } = {
-    roomNumber,
-    maxCapacity,
+  const newRoom: Record<string, unknown> = {
+    roomNumber: options.roomNumber,
+    maxCapacity: options.maxCapacity ?? 4,
     currentOccupancy: 0,
     createdAt: now,
     updatedAt: now
+  }
+
+  // Add optional fields only if they are defined
+  if (options.genderType) {
+    newRoom.genderType = options.genderType
+  }
+  if (options.roomType) {
+    newRoom.roomType = options.roomType
   }
 
   await setDoc(newRoomRef, newRoom)
 
   return {
     id: newRoomRef.id,
-    ...newRoom,
+    roomNumber: options.roomNumber,
+    maxCapacity: options.maxCapacity ?? 4,
+    currentOccupancy: 0,
+    genderType: options.genderType,
+    roomType: options.roomType,
     createdAt: now.toDate(),
     updatedAt: now.toDate()
   }
@@ -136,10 +158,14 @@ export const assignParticipantToRoom = async (
   await batch.commit()
 }
 
-export const updateRoom = async (
-  roomId: string,
-  data: { roomNumber?: string; maxCapacity?: number }
-): Promise<Room> => {
+export interface UpdateRoomData {
+  roomNumber?: string
+  maxCapacity?: number
+  genderType?: RoomGenderType | null
+  roomType?: RoomType | null
+}
+
+export const updateRoom = async (roomId: string, data: UpdateRoomData): Promise<Room> => {
   const roomRef = doc(getDb(), ROOMS_COLLECTION, roomId)
   const roomSnap = await getDoc(roomRef)
 
@@ -160,6 +186,12 @@ export const updateRoom = async (
       throw new Error('Capacity cannot be less than current occupancy')
     }
     updateData.maxCapacity = data.maxCapacity
+  }
+  if (data.genderType !== undefined) {
+    updateData.genderType = data.genderType
+  }
+  if (data.roomType !== undefined) {
+    updateData.roomType = data.roomType
   }
 
   batch.update(roomRef, updateData)

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAtomValue } from 'jotai'
+import { useTranslation } from 'react-i18next'
 import {
   addParticipant,
   getAllGroups,
@@ -22,6 +23,7 @@ function AddParticipantModal({
   onClose,
   onSuccess
 }: AddParticipantModalProps): React.ReactElement | null {
+  const { t } = useTranslation()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
@@ -82,7 +84,7 @@ function AddParticipantModal({
     e.preventDefault()
 
     if (!name.trim() || !email.trim()) {
-      setError('Name and email are required')
+      setError(t('participant.nameRequired'))
       return
     }
 
@@ -139,7 +141,7 @@ function AddParticipantModal({
       onSuccess()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add participant')
+      setError(err instanceof Error ? err.message : t('toast.createFailed'))
     } finally {
       setIsLoading(false)
     }
@@ -151,7 +153,7 @@ function AddParticipantModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-[#DADDE1] px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-[#050505]">Add Participant</h2>
+          <h2 className="text-xl font-bold text-[#050505]">{t('participant.addParticipant')}</h2>
           <button
             onClick={handleClose}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#F2F2F2] text-[#65676B]"
@@ -177,21 +179,21 @@ function AddParticipantModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block text-sm font-medium text-[#050505] mb-1">
-                Name <span className="text-red-500">*</span>
+                {t('common.name')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-4 py-2 bg-[#F0F2F5] rounded-lg outline-none focus:ring-2 focus:ring-[#1877F2] placeholder-[#65676B]"
-                placeholder="Full name"
+                placeholder={t('common.name')}
                 required
               />
             </div>
 
             <div className="col-span-2">
               <label className="block text-sm font-medium text-[#050505] mb-1">
-                Email <span className="text-red-500">*</span>
+                {t('common.email')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="email"
@@ -204,68 +206,80 @@ function AddParticipantModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#050505] mb-1">Phone</label>
+              <label className="block text-sm font-medium text-[#050505] mb-1">
+                {t('common.phone')}
+              </label>
               <input
                 type="tel"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 className="w-full px-4 py-2 bg-[#F0F2F5] rounded-lg outline-none focus:ring-2 focus:ring-[#1877F2] placeholder-[#65676B]"
-                placeholder="Phone number"
+                placeholder={t('common.phone')}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#050505] mb-1">Gender</label>
+              <label className="block text-sm font-medium text-[#050505] mb-1">
+                {t('participant.gender')}
+              </label>
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
                 className="w-full px-4 py-2 bg-[#F0F2F5] rounded-lg outline-none focus:ring-2 focus:ring-[#1877F2] text-[#050505]"
               >
-                <option value="">Select...</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
+                <option value="">{t('common.select')}</option>
+                <option value="male">{t('participant.male')}</option>
+                <option value="female">{t('participant.female')}</option>
+                <option value="other">{t('participant.other')}</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#050505] mb-1">Age</label>
+              <label className="block text-sm font-medium text-[#050505] mb-1">
+                {t('participant.age')}
+              </label>
               <input
                 type="number"
                 value={age}
                 onChange={(e) => setAge(e.target.value)}
                 className="w-full px-4 py-2 bg-[#F0F2F5] rounded-lg outline-none focus:ring-2 focus:ring-[#1877F2] placeholder-[#65676B]"
-                placeholder="Age"
+                placeholder={t('participant.age')}
                 min="0"
                 max="150"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#050505] mb-1">Ward</label>
+              <label className="block text-sm font-medium text-[#050505] mb-1">
+                {t('participant.ward')}
+              </label>
               <input
                 type="text"
                 value={ward}
                 onChange={(e) => setWard(e.target.value)}
                 className="w-full px-4 py-2 bg-[#F0F2F5] rounded-lg outline-none focus:ring-2 focus:ring-[#1877F2] placeholder-[#65676B]"
-                placeholder="Ward"
+                placeholder={t('participant.ward')}
               />
             </div>
 
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-[#050505] mb-1">Stake</label>
+              <label className="block text-sm font-medium text-[#050505] mb-1">
+                {t('participant.stake')}
+              </label>
               <input
                 type="text"
                 value={stake}
                 onChange={(e) => setStake(e.target.value)}
                 className="w-full px-4 py-2 bg-[#F0F2F5] rounded-lg outline-none focus:ring-2 focus:ring-[#1877F2] placeholder-[#65676B]"
-                placeholder="Stake"
+                placeholder={t('participant.stake')}
               />
             </div>
           </div>
 
           <div className="border-t border-[#DADDE1] pt-4 mt-4">
-            <h3 className="text-sm font-semibold text-[#050505] mb-3">Group Assignment</h3>
+            <h3 className="text-sm font-semibold text-[#050505] mb-3">
+              {t('participant.groupRoomAssignment').split(' & ')[0]}
+            </h3>
             <div className="space-y-2">
               <select
                 value={selectedGroupId}
@@ -275,10 +289,10 @@ function AddParticipantModal({
                 }}
                 className="w-full px-4 py-2 bg-[#F0F2F5] rounded-lg outline-none focus:ring-2 focus:ring-[#1877F2] text-[#050505]"
               >
-                <option value="">No group</option>
+                <option value="">{t('common.notAssigned')}</option>
                 {groups.map((group) => (
                   <option key={group.id} value={group.id}>
-                    {group.name} ({group.participantCount} members)
+                    {group.name} ({group.participantCount} {t('common.members')})
                   </option>
                 ))}
               </select>
@@ -291,14 +305,14 @@ function AddParticipantModal({
                     if (e.target.value) setSelectedGroupId('')
                   }}
                   className="flex-1 px-4 py-2 bg-[#F0F2F5] rounded-lg outline-none focus:ring-2 focus:ring-[#1877F2] placeholder-[#65676B]"
-                  placeholder="Or create new group..."
+                  placeholder={t('common.orCreateNew')}
                 />
               </div>
             </div>
           </div>
 
           <div className="border-t border-[#DADDE1] pt-4">
-            <h3 className="text-sm font-semibold text-[#050505] mb-3">Room Assignment</h3>
+            <h3 className="text-sm font-semibold text-[#050505] mb-3">{t('participant.room')}</h3>
             <div className="space-y-2">
               <select
                 value={selectedRoomId}
@@ -308,13 +322,13 @@ function AddParticipantModal({
                 }}
                 className="w-full px-4 py-2 bg-[#F0F2F5] rounded-lg outline-none focus:ring-2 focus:ring-[#1877F2] text-[#050505]"
               >
-                <option value="">No room</option>
+                <option value="">{t('common.notAssigned')}</option>
                 {rooms.map((room) => {
                   const isFull = room.currentOccupancy >= room.maxCapacity
                   return (
                     <option key={room.id} value={room.id} disabled={isFull}>
-                      Room {room.roomNumber} ({room.currentOccupancy}/{room.maxCapacity})
-                      {isFull ? ' - Full' : ''}
+                      {t('participant.room')} {room.roomNumber} ({room.currentOccupancy}/
+                      {room.maxCapacity}){isFull ? ` - ${t('room.full')}` : ''}
                     </option>
                   )
                 })}
@@ -328,7 +342,7 @@ function AddParticipantModal({
                     if (e.target.value) setSelectedRoomId('')
                   }}
                   className="flex-1 px-4 py-2 bg-[#F0F2F5] rounded-lg outline-none focus:ring-2 focus:ring-[#1877F2] placeholder-[#65676B]"
-                  placeholder="Or create new room..."
+                  placeholder={t('common.orCreateNew')}
                 />
                 {newRoomNumber && (
                   <input
@@ -336,7 +350,7 @@ function AddParticipantModal({
                     value={newRoomCapacity}
                     onChange={(e) => setNewRoomCapacity(e.target.value)}
                     className="w-24 px-4 py-2 bg-[#F0F2F5] rounded-lg outline-none focus:ring-2 focus:ring-[#1877F2] placeholder-[#65676B]"
-                    placeholder="Capacity"
+                    placeholder={t('room.capacity')}
                     min="1"
                   />
                 )}
@@ -350,14 +364,14 @@ function AddParticipantModal({
               onClick={handleClose}
               className="flex-1 px-4 py-2.5 bg-[#E4E6EB] text-[#050505] rounded-lg font-medium hover:bg-[#D8DADF] transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={isLoading || !name.trim() || !email.trim()}
               className="flex-1 px-4 py-2.5 bg-[#1877F2] text-white rounded-lg font-medium hover:bg-[#166FE5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Adding...' : 'Add Participant'}
+              {isLoading ? t('common.loading') : t('participant.addParticipant')}
             </button>
           </div>
         </form>

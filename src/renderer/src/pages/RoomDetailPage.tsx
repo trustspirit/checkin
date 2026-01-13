@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useTranslation } from 'react-i18next'
 import { participantsAtom, roomsAtom, groupsAtom, syncAtom } from '../stores/dataStore'
@@ -11,12 +11,13 @@ import {
 import { addToastAtom } from '../stores/toastStore'
 import { userNameAtom } from '../stores/userStore'
 import { writeAuditLog } from '../services/auditLog'
-import type { Room } from '../types'
+import type { Room, RoomGenderType, RoomType } from '../types'
 import { DetailPageSkeleton } from '../components'
 
 function RoomDetailPage(): React.ReactElement {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const rooms = useAtomValue(roomsAtom)
   const groups = useAtomValue(groupsAtom)
   const participants = useAtomValue(participantsAtom)
@@ -30,6 +31,8 @@ function RoomDetailPage(): React.ReactElement {
 
   const [editRoomNumber, setEditRoomNumber] = useState('')
   const [editCapacity, setEditCapacity] = useState(4)
+  const [editGenderType, setEditGenderType] = useState<RoomGenderType | ''>('')
+  const [editRoomType, setEditRoomType] = useState<RoomType | ''>('')
 
   const [movingParticipantId, setMovingParticipantId] = useState<string | null>(null)
 
@@ -49,6 +52,8 @@ function RoomDetailPage(): React.ReactElement {
     if (room) {
       setEditRoomNumber(room.roomNumber)
       setEditCapacity(room.maxCapacity)
+      setEditGenderType(room.genderType || '')
+      setEditRoomType(room.roomType || '')
     }
   }, [room])
 
@@ -73,10 +78,18 @@ function RoomDetailPage(): React.ReactElement {
       if (editCapacity !== room.maxCapacity) {
         changes.maxCapacity = { from: room.maxCapacity, to: editCapacity }
       }
+      if (editGenderType !== (room.genderType || '')) {
+        changes.genderType = { from: room.genderType || null, to: editGenderType || null }
+      }
+      if (editRoomType !== (room.roomType || '')) {
+        changes.roomType = { from: room.roomType || null, to: editRoomType || null }
+      }
 
       await updateRoom(id, {
         roomNumber: editRoomNumber.trim(),
-        maxCapacity: editCapacity
+        maxCapacity: editCapacity,
+        genderType: editGenderType || null,
+        roomType: editRoomType || null
       })
 
       if (Object.keys(changes).length > 0) {
@@ -97,7 +110,7 @@ function RoomDetailPage(): React.ReactElement {
       console.error('Update room error:', error)
       addToast({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to update room'
+        message: error instanceof Error ? error.message : t('toast.updateRoomFailed')
       })
     } finally {
       setIsSaving(false)
@@ -123,7 +136,7 @@ function RoomDetailPage(): React.ReactElement {
       console.error('Remove participant error:', error)
       addToast({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to remove participant'
+        message: error instanceof Error ? error.message : t('toast.removeParticipantFailed')
       })
     }
   }
@@ -147,12 +160,15 @@ function RoomDetailPage(): React.ReactElement {
       )
       await sync()
       setMovingParticipantId(null)
-      addToast({ type: 'success', message: t('room.movedToRoom', { number: targetRoom.roomNumber }) })
+      addToast({
+        type: 'success',
+        message: t('room.movedToRoom', { number: targetRoom.roomNumber })
+      })
     } catch (error) {
       console.error('Move participant error:', error)
       addToast({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to move participant'
+        message: error instanceof Error ? error.message : t('toast.moveParticipantFailed')
       })
     }
   }
@@ -162,6 +178,56 @@ function RoomDetailPage(): React.ReactElement {
     if (percentage >= 1) return 'text-[#FA383E] bg-[#FFEBEE]'
     if (percentage >= 0.75) return 'text-[#F57C00] bg-[#FFF3E0]'
     return 'text-[#31A24C] bg-[#EFFFF6]'
+  }
+
+  const getGenderTypeLabel = (genderType?: RoomGenderType) => {
+    switch (genderType) {
+      case 'male':
+        return t('room.genderMale')
+      case 'female':
+        return t('room.genderFemale')
+      case 'mixed':
+        return t('room.genderMixed')
+      default:
+        return ''
+    }
+  }
+
+  const getRoomTypeLabel = (roomType?: RoomType) => {
+    switch (roomType) {
+      case 'general':
+        return t('room.typeGeneral')
+      case 'guest':
+        return t('room.typeGuest')
+      case 'leadership':
+        return t('room.typeLeadership')
+      default:
+        return ''
+    }
+  }
+
+  const getGenderTypeBadgeColor = (genderType?: RoomGenderType) => {
+    switch (genderType) {
+      case 'male':
+        return 'bg-blue-100 text-blue-700'
+      case 'female':
+        return 'bg-pink-100 text-pink-700'
+      case 'mixed':
+        return 'bg-purple-100 text-purple-700'
+      default:
+        return ''
+    }
+  }
+
+  const getRoomTypeBadgeColor = (roomType?: RoomType) => {
+    switch (roomType) {
+      case 'guest':
+        return 'bg-amber-100 text-amber-700'
+      case 'leadership':
+        return 'bg-emerald-100 text-emerald-700'
+      default:
+        return ''
+    }
   }
 
   if (isLoading) {
@@ -181,53 +247,120 @@ function RoomDetailPage(): React.ReactElement {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Link
-        to="/rooms"
-        className="inline-flex items-center gap-2 text-[#65676B] hover:text-[#1877F2] mb-6 font-semibold transition-colors"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        {t('room.backToRooms')}
-      </Link>
+      <div className="flex items-center gap-4 mb-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1 px-3 py-1.5 text-[#65676B] hover:text-[#1877F2] hover:bg-[#F0F2F5] rounded-lg font-semibold transition-colors"
+          title={t('common.back')}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          {t('common.back')}
+        </button>
+        <span className="text-[#DADDE1]">|</span>
+        <Link
+          to="/rooms"
+          className="inline-flex items-center gap-1 text-[#65676B] hover:text-[#1877F2] font-semibold transition-colors"
+        >
+          {t('room.backToRooms')}
+        </Link>
+      </div>
 
       <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm p-6 mb-6">
         <div className="flex justify-between items-start mb-6 pb-6 border-b border-[#DADDE1]">
           <div className="flex-1">
             {isEditing ? (
-              <div className="flex items-end gap-4">
-                <div>
-                  <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
-                    {t('room.roomNumber')}
-                  </label>
-                  <input
-                    type="text"
-                    value={editRoomNumber}
-                    onChange={(e) => setEditRoomNumber(e.target.value)}
-                    className="px-3 py-2 border border-[#DADDE1] rounded-md text-xl font-bold text-[#050505] w-40 outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
-                  />
+              <div className="space-y-4">
+                <div className="flex items-end gap-4 flex-wrap">
+                  <div>
+                    <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
+                      {t('room.roomNumber')}
+                    </label>
+                    <input
+                      type="text"
+                      value={editRoomNumber}
+                      onChange={(e) => setEditRoomNumber(e.target.value)}
+                      className="px-3 py-2 border border-[#DADDE1] rounded-md text-xl font-bold text-[#050505] w-40 outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
+                      {t('room.capacity')}
+                    </label>
+                    <input
+                      type="number"
+                      value={editCapacity}
+                      onChange={(e) => setEditCapacity(parseInt(e.target.value) || 0)}
+                      min={room.currentOccupancy}
+                      className="px-3 py-2 border border-[#DADDE1] rounded-md text-xl font-bold text-[#050505] w-24 outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
-                    {t('room.capacity')}
-                  </label>
-                  <input
-                    type="number"
-                    value={editCapacity}
-                    onChange={(e) => setEditCapacity(parseInt(e.target.value) || 0)}
-                    min={room.currentOccupancy}
-                    className="px-3 py-2 border border-[#DADDE1] rounded-md text-xl font-bold text-[#050505] w-24 outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
-                  />
+                <div className="flex items-end gap-4 flex-wrap">
+                  <div>
+                    <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
+                      {t('room.genderType')}
+                    </label>
+                    <select
+                      value={editGenderType}
+                      onChange={(e) => setEditGenderType(e.target.value as RoomGenderType | '')}
+                      className="px-3 py-2 border border-[#DADDE1] rounded-md text-sm font-medium text-[#050505] w-32 outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
+                    >
+                      <option value="">{t('common.select')}</option>
+                      <option value="male">{t('room.genderMale')}</option>
+                      <option value="female">{t('room.genderFemale')}</option>
+                      <option value="mixed">{t('room.genderMixed')}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
+                      {t('room.roomType')}
+                    </label>
+                    <select
+                      value={editRoomType}
+                      onChange={(e) => setEditRoomType(e.target.value as RoomType | '')}
+                      className="px-3 py-2 border border-[#DADDE1] rounded-md text-sm font-medium text-[#050505] w-32 outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
+                    >
+                      <option value="">{t('common.select')}</option>
+                      <option value="general">{t('room.typeGeneral')}</option>
+                      <option value="guest">{t('room.typeGuest')}</option>
+                      <option value="leadership">{t('room.typeLeadership')}</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             ) : (
               <div>
-                <h1 className="text-3xl font-bold text-[#050505] mb-2">{t('participant.room')} {room.roomNumber}</h1>
-                <span
-                  className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${getCapacityColor(room.currentOccupancy, room.maxCapacity)}`}
-                >
-                  {room.currentOccupancy} / {room.maxCapacity} {t('room.occupied')}
-                </span>
+                <h1 className="text-3xl font-bold text-[#050505] mb-2">
+                  {t('participant.room')} {room.roomNumber}
+                </h1>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${getCapacityColor(room.currentOccupancy, room.maxCapacity)}`}
+                  >
+                    {room.currentOccupancy} / {room.maxCapacity} {t('room.occupied')}
+                  </span>
+                  {room.genderType && (
+                    <span
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${getGenderTypeBadgeColor(room.genderType)}`}
+                    >
+                      {getGenderTypeLabel(room.genderType)}
+                    </span>
+                  )}
+                  {room.roomType && room.roomType !== 'general' && (
+                    <span
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${getRoomTypeBadgeColor(room.roomType)}`}
+                    >
+                      {getRoomTypeLabel(room.roomType)}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
           </div>

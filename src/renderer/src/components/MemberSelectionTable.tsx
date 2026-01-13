@@ -1,6 +1,7 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Participant } from '../types'
-import { CheckInStatus } from '../types'
+// CheckInStatus is available through getCheckInStatusFromParticipant
 import CheckInStatusBadge, { getCheckInStatusFromParticipant } from './CheckInStatusBadge'
 
 interface MemberSelectionTableProps {
@@ -24,13 +25,16 @@ function MemberSelectionTable({
   onMoveAction,
   moveActionLabel
 }: MemberSelectionTableProps): React.ReactElement {
+  const { t } = useTranslation()
   const allSelected = members.length > 0 && members.every((m) => selectedIds.has(m.id))
 
   return (
     <div className="ml-6 border-l-2 border-[#1877F2]/30 pl-4">
       {selectedIds.size > 0 && (
         <div className="mb-3 flex items-center gap-3">
-          <span className="text-sm text-[#65676B]">{selectedIds.size} selected</span>
+          <span className="text-sm text-[#65676B]">
+            {selectedIds.size} {t('participant.selected')}
+          </span>
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -47,7 +51,7 @@ function MemberSelectionTable({
             }}
             className="px-3 py-1 bg-[#E4E6EB] text-[#050505] text-sm rounded-md hover:bg-[#D8DADF] font-semibold"
           >
-            Clear Selection
+            {t('common.cancel')}
           </button>
         </div>
       )}
@@ -66,10 +70,10 @@ function MemberSelectionTable({
                 className="w-4 h-4 rounded border-[#DADDE1] text-[#1877F2] focus:ring-[#1877F2]"
               />
             </th>
-            <th className="py-2 text-left font-medium">Name</th>
-            <th className="py-2 text-left font-medium">Email</th>
-            <th className="py-2 text-left font-medium">Phone</th>
-            <th className="py-2 text-left font-medium">Status</th>
+            <th className="py-2 text-left font-medium">{t('common.name')}</th>
+            <th className="py-2 text-left font-medium">{t('common.email')}</th>
+            <th className="py-2 text-left font-medium">{t('common.phone')}</th>
+            <th className="py-2 text-left font-medium">{t('common.status')}</th>
           </tr>
         </thead>
         <tbody>

@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Group, Room } from '../types'
 
 interface MoveToRoomModalProps {
@@ -26,12 +27,13 @@ interface MoveToGroupModalProps {
 type MoveToModalProps = MoveToRoomModalProps | MoveToGroupModalProps
 
 function MoveToModal(props: MoveToModalProps): React.ReactElement {
+  const { t } = useTranslation()
   const { type, selectedCount, items, currentId, isMoving, error, onClose } = props
 
   const title =
     type === 'room'
-      ? `Move ${selectedCount} participant(s) to another room`
-      : `Move ${selectedCount} participant(s) to another group`
+      ? t('participant.moveToAnotherRoom', { count: selectedCount })
+      : t('participant.moveToAnotherGroup', { count: selectedCount })
 
   const filteredItems = items.filter((item) => item.id !== currentId)
 
@@ -63,9 +65,11 @@ function MoveToModal(props: MoveToModalProps): React.ReactElement {
                   }`}
                 >
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold text-[#050505]">Room {room.roomNumber}</span>
+                    <span className="font-semibold text-[#050505]">
+                      {t('participant.room')} {room.roomNumber}
+                    </span>
                     <span className={`text-sm ${canFit ? 'text-[#31A24C]' : 'text-[#FA383E]'}`}>
-                      {available} available
+                      {available} {t('participant.available')}
                     </span>
                   </div>
                 </button>
@@ -82,7 +86,9 @@ function MoveToModal(props: MoveToModalProps): React.ReactElement {
               >
                 <div className="flex justify-between items-center">
                   <span className="font-semibold text-[#050505]">{group.name}</span>
-                  <span className="text-sm text-[#65676B]">{group.participantCount} members</span>
+                  <span className="text-sm text-[#65676B]">
+                    {group.participantCount} {t('common.members')}
+                  </span>
                 </div>
               </button>
             ))}
@@ -94,7 +100,7 @@ function MoveToModal(props: MoveToModalProps): React.ReactElement {
             disabled={isMoving}
             className="px-4 py-2 bg-[#E4E6EB] text-[#050505] rounded-md hover:bg-[#D8DADF] font-semibold"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
       </div>

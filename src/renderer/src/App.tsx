@@ -216,7 +216,7 @@ function App(): React.ReactElement {
                 isActive ? 'text-[#1877F2] bg-[#E7F3FF] hover:bg-[#DBE7F2]' : 'text-[#050505]'
               }`
             }
-            title="Settings"
+            title={t('nav.settings')}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

@@ -115,7 +115,7 @@ function ParticipantsListPage(): React.ReactElement {
             <button
               onClick={handleResetSort}
               className="ml-1 text-[#65676B] hover:text-[#050505] text-xs font-bold"
-              title="Clear sort"
+              title={t('participant.clearSort')}
             >
               ×
             </button>
@@ -254,7 +254,7 @@ function ParticipantsListPage(): React.ReactElement {
       setSelectedRoomMembers(new Set())
       setShowMoveToRoomModal(false)
     } catch (error) {
-      setMoveError(error instanceof Error ? error.message : 'Failed to move participants')
+      setMoveError(error instanceof Error ? error.message : t('toast.moveParticipantFailed'))
     } finally {
       setIsMoving(false)
     }
@@ -273,7 +273,7 @@ function ParticipantsListPage(): React.ReactElement {
       setSelectedGroupMembers(new Set())
       setShowMoveToGroupModal(false)
     } catch (error) {
-      setMoveError(error instanceof Error ? error.message : 'Failed to move participants')
+      setMoveError(error instanceof Error ? error.message : t('toast.moveParticipantFailed'))
     } finally {
       setIsMoving(false)
     }
@@ -292,8 +292,8 @@ function ParticipantsListPage(): React.ReactElement {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#050505] mb-1">All Data</h1>
-        <p className="text-[#65676B]">View all participants, groups, and rooms</p>
+        <h1 className="text-2xl font-bold text-[#050505] mb-1">{t('participant.allData')}</h1>
+        <p className="text-[#65676B]">{t('participant.viewAllSubtitle')}</p>
       </div>
 
       <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
@@ -306,7 +306,7 @@ function ParticipantsListPage(): React.ReactElement {
                 type="text"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                placeholder="Filter participants..."
+                placeholder={t('participant.filterPlaceholder')}
                 className="flex-1 md:max-w-80 px-4 py-2 bg-[#F0F2F5] border-none rounded-full outline-none focus:ring-2 focus:ring-[#1877F2] placeholder-[#65676B]"
               />
               <div className="flex items-center gap-2">
@@ -526,18 +526,18 @@ function ParticipantsListPage(): React.ReactElement {
             <table className="w-full">
               <thead>
                 <tr className="bg-[#F0F2F5] border-b border-[#DADDE1]">
-                  <SortableHeader field="name">Name</SortableHeader>
+                  <SortableHeader field="name">{t('common.name')}</SortableHeader>
                   <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
                     Email
                   </th>
                   <th className="px-4 py-3 text-left text-[13px] font-semibold text-[#65676B] uppercase tracking-wide">
                     Phone
                   </th>
-                  <SortableHeader field="ward">Ward</SortableHeader>
-                  <SortableHeader field="group">Group</SortableHeader>
-                  <SortableHeader field="room">Room</SortableHeader>
-                  <SortableHeader field="payment">Payment</SortableHeader>
-                  <SortableHeader field="status">Status</SortableHeader>
+                  <SortableHeader field="ward">{t('participant.ward')}</SortableHeader>
+                  <SortableHeader field="group">{t('participant.group')}</SortableHeader>
+                  <SortableHeader field="room">{t('participant.room')}</SortableHeader>
+                  <SortableHeader field="payment">{t('participant.payment')}</SortableHeader>
+                  <SortableHeader field="status">{t('common.status')}</SortableHeader>
                 </tr>
               </thead>
               <tbody>
@@ -590,14 +590,18 @@ function ParticipantsListPage(): React.ReactElement {
               </tbody>
             </table>
             {displayedParticipants.length === 0 && !isSearching && hasInitiallyLoaded && (
-              <div className="text-center py-8 text-[#65676B]">No participants found</div>
+              <div className="text-center py-8 text-[#65676B]">
+                {t('participant.noParticipantsFound')}
+              </div>
             )}
             {hasMore && hasInitiallyLoaded && (
               <div ref={loadMoreRef} className="flex justify-center py-4">
                 {isSearching ? (
                   <div className="w-6 h-6 border-2 border-[#DADDE1] border-t-[#1877F2] rounded-full animate-spin" />
                 ) : (
-                  <span className="text-[#65676B] text-sm">Scroll to load more...</span>
+                  <span className="text-[#65676B] text-sm">
+                    {t('participant.scrollToLoadMore')}
+                  </span>
                 )}
               </div>
             )}
@@ -647,7 +651,7 @@ function ParticipantsListPage(): React.ReactElement {
                           {group.name}
                           {hoveredGroupId === group.id && members.length > 0 && !isExpanded && (
                             <Tooltip
-                              title="Members"
+                              title={t('common.membersTitle')}
                               items={members.map((m) => ({ id: m.id, name: m.name }))}
                             />
                           )}
@@ -703,7 +707,7 @@ function ParticipantsListPage(): React.ReactElement {
               </tbody>
             </table>
             {groups.length === 0 && !isLoading && (
-              <div className="text-center py-8 text-[#65676B]">No groups created yet</div>
+              <div className="text-center py-8 text-[#65676B]">{t('group.noGroupsCreated')}</div>
             )}
           </div>
         </div>
@@ -750,7 +754,7 @@ function ParticipantsListPage(): React.ReactElement {
                           Room {room.roomNumber}
                           {hoveredRoomId === room.id && members.length > 0 && !isExpanded && (
                             <Tooltip
-                              title="Occupants"
+                              title={t('common.occupants')}
                               items={members.map((m) => ({ id: m.id, name: m.name }))}
                             />
                           )}
@@ -815,7 +819,7 @@ function ParticipantsListPage(): React.ReactElement {
               </tbody>
             </table>
             {rooms.length === 0 && !isLoading && (
-              <div className="text-center py-8 text-[#65676B]">No rooms created yet</div>
+              <div className="text-center py-8 text-[#65676B]">{t('room.noRoomsCreated')}</div>
             )}
           </div>
         </div>

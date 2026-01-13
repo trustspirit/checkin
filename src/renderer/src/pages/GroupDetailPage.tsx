@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useTranslation } from 'react-i18next'
 import { participantsAtom, groupsAtom, roomsAtom, syncAtom } from '../stores/dataStore'
@@ -17,6 +17,7 @@ import { DetailPageSkeleton } from '../components'
 function GroupDetailPage(): React.ReactElement {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const groups = useAtomValue(groupsAtom)
   const rooms = useAtomValue(roomsAtom)
   const participants = useAtomValue(participantsAtom)
@@ -30,8 +31,12 @@ function GroupDetailPage(): React.ReactElement {
 
   const [editGroupName, setEditGroupName] = useState('')
   const [editExpectedCapacity, setEditExpectedCapacity] = useState('')
+  const [editTags, setEditTags] = useState<string[]>([])
+  const [customTagInput, setCustomTagInput] = useState('')
 
   const [movingParticipantId, setMovingParticipantId] = useState<string | null>(null)
+
+  const presetTags = ['male', 'female']
 
   useEffect(() => {
     const init = async () => {
@@ -49,6 +54,7 @@ function GroupDetailPage(): React.ReactElement {
     if (group) {
       setEditGroupName(group.name)
       setEditExpectedCapacity(group.expectedCapacity?.toString() || '')
+      setEditTags(group.tags || [])
     }
   }, [group])
 
@@ -72,10 +78,16 @@ function GroupDetailPage(): React.ReactElement {
       if (newCapacity !== group.expectedCapacity) {
         changes.expectedCapacity = { from: group.expectedCapacity || null, to: newCapacity || null }
       }
+      const tagsChanged =
+        JSON.stringify(editTags.sort()) !== JSON.stringify((group.tags || []).sort())
+      if (tagsChanged) {
+        changes.tags = { from: group.tags || [], to: editTags }
+      }
 
       await updateGroup(id, {
         name: editGroupName.trim(),
-        expectedCapacity: newCapacity
+        expectedCapacity: newCapacity,
+        tags: editTags.length > 0 ? editTags : null
       })
 
       if (Object.keys(changes).length > 0) {
@@ -89,7 +101,7 @@ function GroupDetailPage(): React.ReactElement {
       console.error('Update group error:', error)
       addToast({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to update group'
+        message: error instanceof Error ? error.message : t('toast.updateGroupFailed')
       })
     } finally {
       setIsSaving(false)
@@ -115,7 +127,7 @@ function GroupDetailPage(): React.ReactElement {
       console.error('Remove participant error:', error)
       addToast({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to remove participant'
+        message: error instanceof Error ? error.message : t('toast.removeParticipantFailed')
       })
     }
   }
@@ -144,9 +156,37 @@ function GroupDetailPage(): React.ReactElement {
       console.error('Move participant error:', error)
       addToast({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to move participant'
+        message: error instanceof Error ? error.message : t('toast.moveParticipantFailed')
       })
     }
+  }
+
+  const togglePresetTag = (tag: string) => {
+    setEditTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
+  }
+
+  const addCustomTag = () => {
+    const tag = customTagInput.trim().toLowerCase()
+    if (tag && !editTags.includes(tag)) {
+      setEditTags((prev) => [...prev, tag])
+      setCustomTagInput('')
+    }
+  }
+
+  const removeTag = (tag: string) => {
+    setEditTags((prev) => prev.filter((t) => t !== tag))
+  }
+
+  const getTagLabel = (tag: string) => {
+    if (tag === 'male') return t('group.tagMale')
+    if (tag === 'female') return t('group.tagFemale')
+    return tag
+  }
+
+  const getTagColor = (tag: string) => {
+    if (tag === 'male') return 'bg-blue-100 text-blue-700'
+    if (tag === 'female') return 'bg-pink-100 text-pink-700'
+    return 'bg-gray-100 text-gray-600'
   }
 
   if (isLoading) {
@@ -166,53 +206,137 @@ function GroupDetailPage(): React.ReactElement {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Link
-        to="/groups"
-        className="inline-flex items-center gap-2 text-[#65676B] hover:text-[#1877F2] mb-6 font-semibold transition-colors"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        {t('group.backToGroups')}
-      </Link>
+      <div className="flex items-center gap-4 mb-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1 px-3 py-1.5 text-[#65676B] hover:text-[#1877F2] hover:bg-[#F0F2F5] rounded-lg font-semibold transition-colors"
+          title={t('common.back')}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          {t('common.back')}
+        </button>
+        <span className="text-[#DADDE1]">|</span>
+        <Link
+          to="/groups"
+          className="inline-flex items-center gap-1 text-[#65676B] hover:text-[#1877F2] font-semibold transition-colors"
+        >
+          {t('group.backToGroups')}
+        </Link>
+      </div>
 
       <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm p-6 mb-6">
         <div className="flex justify-between items-start mb-6 pb-6 border-b border-[#DADDE1]">
           <div className="flex-1">
             {isEditing ? (
-              <div className="flex items-end gap-4">
-                <div>
-                  <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
-                    {t('group.groupName')}
-                  </label>
-                  <input
-                    type="text"
-                    value={editGroupName}
-                    onChange={(e) => setEditGroupName(e.target.value)}
-                    className="px-3 py-2 border border-[#DADDE1] rounded-md text-xl font-bold text-[#050505] w-64 outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
-                  />
+              <div className="space-y-4">
+                <div className="flex items-end gap-4 flex-wrap">
+                  <div>
+                    <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
+                      {t('group.groupName')}
+                    </label>
+                    <input
+                      type="text"
+                      value={editGroupName}
+                      onChange={(e) => setEditGroupName(e.target.value)}
+                      className="px-3 py-2 border border-[#DADDE1] rounded-md text-xl font-bold text-[#050505] w-64 outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
+                      {t('group.expectedCapacity')}
+                    </label>
+                    <input
+                      type="number"
+                      value={editExpectedCapacity}
+                      onChange={(e) => setEditExpectedCapacity(e.target.value)}
+                      placeholder={t('group.optional')}
+                      min={1}
+                      className="px-3 py-2 border border-[#DADDE1] rounded-md text-xl font-bold text-[#050505] w-32 outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
+                    />
+                  </div>
                 </div>
+
+                {/* Tags Edit Section */}
                 <div>
-                  <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
-                    {t('group.expectedCapacity')}
+                  <label className="text-xs uppercase tracking-wide text-[#65676B] mb-2 font-semibold block">
+                    {t('group.tags')}
                   </label>
-                  <input
-                    type="number"
-                    value={editExpectedCapacity}
-                    onChange={(e) => setEditExpectedCapacity(e.target.value)}
-                    placeholder="Optional"
-                    min={1}
-                    className="px-3 py-2 border border-[#DADDE1] rounded-md text-xl font-bold text-[#050505] w-32 outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
-                  />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {presetTags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => togglePresetTag(tag)}
+                        className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-colors ${
+                          editTags.includes(tag)
+                            ? getTagColor(tag)
+                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                        }`}
+                      >
+                        {getTagLabel(tag)}
+                      </button>
+                    ))}
+                    <span className="text-[#DADDE1]">|</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={customTagInput}
+                        onChange={(e) => setCustomTagInput(e.target.value)}
+                        placeholder={t('group.addCustomTag')}
+                        className="w-36 px-2 py-1.5 border border-[#DADDE1] rounded text-sm outline-none focus:ring-1 focus:ring-[#1877F2] focus:border-transparent"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            addCustomTag()
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={addCustomTag}
+                        disabled={!customTagInput.trim()}
+                        className="px-2 py-1.5 bg-[#E7F3FF] text-[#1877F2] rounded text-sm font-semibold hover:bg-[#D4E8FF] disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                  {editTags.length > 0 && (
+                    <div className="flex items-center gap-1 flex-wrap mt-2">
+                      {editTags.map((tag) => (
+                        <span
+                          key={tag}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-semibold ${getTagColor(tag)}`}
+                        >
+                          {getTagLabel(tag)}
+                          <button
+                            type="button"
+                            onClick={() => removeTag(tag)}
+                            className="hover:opacity-70 ml-1"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
               <div>
                 <h1 className="text-3xl font-bold text-[#050505] mb-2">{group.name}</h1>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-[#F0F2F5] text-[#65676B]">
                     {group.participantCount}
-                    {group.expectedCapacity ? ` / ${group.expectedCapacity}` : ''} {t('common.members')}
+                    {group.expectedCapacity ? ` / ${group.expectedCapacity}` : ''}{' '}
+                    {t('common.members')}
                   </span>
                   {group.expectedCapacity && (
                     <span
@@ -231,6 +355,14 @@ function GroupDetailPage(): React.ReactElement {
                           : t('room.available')}
                     </span>
                   )}
+                  {group.tags?.map((tag) => (
+                    <span
+                      key={tag}
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${getTagColor(tag)}`}
+                    >
+                      {getTagLabel(tag)}
+                    </span>
+                  ))}
                 </div>
               </div>
             )}
@@ -290,7 +422,7 @@ function GroupDetailPage(): React.ReactElement {
                           to={`/rooms/${participant.roomId}`}
                           className="text-sm text-[#1877F2] hover:underline"
                         >
-                          Room{' '}
+                          {t('participant.room')}{' '}
                           {rooms.find((r) => r.id === participant.roomId)?.roomNumber ||
                             participant.roomNumber}
                         </Link>

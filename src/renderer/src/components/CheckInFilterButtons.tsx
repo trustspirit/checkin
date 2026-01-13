@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface CheckInFilterButtonsProps {
   filter: 'all' | 'checked-in' | 'not-checked-in'
@@ -15,6 +16,8 @@ function CheckInFilterButtons({
   onChange,
   counts
 }: CheckInFilterButtonsProps): React.ReactElement {
+  const { t } = useTranslation()
+
   return (
     <div className="flex bg-[#F0F2F5] rounded-lg p-1">
       <button
@@ -25,7 +28,7 @@ function CheckInFilterButtons({
             : 'text-[#65676B] hover:text-[#050505]'
         }`}
       >
-        All ({counts.all})
+        {t('common.all')} ({counts.all})
       </button>
       <button
         onClick={() => onChange('checked-in')}
@@ -35,7 +38,7 @@ function CheckInFilterButtons({
             : 'text-[#65676B] hover:text-[#050505]'
         }`}
       >
-        Checked In ({counts.checkedIn})
+        {t('participant.checkedIn')} ({counts.checkedIn})
       </button>
       <button
         onClick={() => onChange('not-checked-in')}
@@ -45,7 +48,7 @@ function CheckInFilterButtons({
             : 'text-[#65676B] hover:text-[#050505]'
         }`}
       >
-        Not Checked In ({counts.notCheckedIn})
+        {t('participant.notCheckedIn')} ({counts.notCheckedIn})
       </button>
     </div>
   )

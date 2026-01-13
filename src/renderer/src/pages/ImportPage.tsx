@@ -32,7 +32,7 @@ function ImportPage(): React.ReactElement {
         skipEmptyLines: true,
         complete: (results) => {
           if (results.errors.length > 0) {
-            setError(`CSV parsing error: ${results.errors[0].message}`)
+            setError(t('import.parsingError', { error: results.errors[0].message }))
             return
           }
 
@@ -106,7 +106,7 @@ function ImportPage(): React.ReactElement {
       })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err)
-      setError(`Failed to read file: ${errorMessage}`)
+      setError(t('import.fileReadError', { error: errorMessage }))
       console.error('File read error:', err)
     }
   }
@@ -159,7 +159,7 @@ function ImportPage(): React.ReactElement {
 
       setPreview([])
     } catch (err) {
-      setError('Import failed. Please check your Firebase configuration.')
+      setError(t('import.importFailed'))
       console.error(err)
     } finally {
       setIsImporting(false)
@@ -370,26 +370,24 @@ function ImportPage(): React.ReactElement {
 
       {/* Instructions */}
       <div className="mt-8 bg-white rounded-lg p-6 border border-[#DADDE1] shadow-sm">
-        <h3 className="font-bold text-[#050505] mb-3">CSV Format Guidelines</h3>
+        <h3 className="font-bold text-[#050505] mb-3">{t('import.csvFormatTitle')}</h3>
         <div className="text-sm text-[#65676B] space-y-2">
           <p>
-            <strong>Required columns:</strong> name, email
+            <strong>{t('import.requiredColumnsTitle')}</strong> {t('import.requiredColumnsValue')}
           </p>
           <p>
-            <strong>Optional columns:</strong> gender, age, stake, ward, phoneNumber (or phone),
-            groupName (or group), roomNumber (or room)
+            <strong>{t('import.optionalColumnsTitle')}</strong> {t('import.optionalColumnsValue')}
           </p>
           <p>
-            <strong>Metadata:</strong> Any additional columns will be stored as metadata
+            <strong>{t('import.metadataNote')}</strong>
           </p>
           <p>
-            <strong>Updates:</strong> Existing participants (matched by name + gender + email) will
-            be updated
+            <strong>{t('import.updatesNote')}</strong>
           </p>
         </div>
 
         <div className="mt-4">
-          <h4 className="font-semibold text-[#050505] mb-2">Example CSV:</h4>
+          <h4 className="font-semibold text-[#050505] mb-2">{t('import.exampleCSV')}</h4>
           <pre className="bg-[#F0F2F5] p-3 rounded-md border border-[#DADDE1] text-xs overflow-x-auto text-[#65676B]">
             {`name,email,phone,gender,age,ward,stake,group,room
 John Doe,john@example.com,555-1234,male,25,Ward 1,Stake A,Group Alpha,101

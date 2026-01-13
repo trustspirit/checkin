@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { reinitializeFirebase } from '../services/firebase'
+import { useSetAtom } from 'jotai'
+import { reinitializeFirebase, resetAllData } from '../services/firebase'
+import { syncAtom } from '../stores/dataStore'
+import { addToastAtom } from '../stores/toastStore'
 import { changeLanguage, getCurrentLanguage } from '../i18n'
+import { ConfirmDialog, SectionCard } from '../components/ui'
 
 function SettingsPage(): React.ReactElement {
   const { t } = useTranslation()
+  const sync = useSetAtom(syncAtom)
+  const addToast = useSetAtom(addToastAtom)
   const [configPath, setConfigPath] = useState<string | null>(null)
   const [isConfigured, setIsConfigured] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [currentLang, setCurrentLang] = useState(getCurrentLanguage())
+  const [showResetDialog, setShowResetDialog] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
 
   useEffect(() => {
     loadCurrentConfig()
@@ -40,16 +48,16 @@ function SettingsPage(): React.ReactElement {
         setIsConfigured(true)
         setMessage({
           type: 'success',
-          text: 'Configuration loaded successfully! Firebase connected.'
+          text: t('settings.configSuccess')
         })
       } else {
         setMessage({
           type: 'error',
-          text: result.error || 'Failed to import configuration file'
+          text: result.error || t('settings.configFailed')
         })
       }
     } catch {
-      setMessage({ type: 'error', text: 'Error importing configuration file' })
+      setMessage({ type: 'error', text: t('settings.configFailed') })
     }
   }
 
@@ -60,16 +68,40 @@ function SettingsPage(): React.ReactElement {
       setIsConfigured(false)
       setMessage({
         type: 'success',
-        text: 'Configuration cleared. Please import a new configuration file.'
+        text: t('settings.configCleared')
       })
     } catch {
-      setMessage({ type: 'error', text: 'Failed to clear configuration' })
+      setMessage({ type: 'error', text: t('settings.clearConfigFailed') })
     }
   }
 
   const handleLanguageChange = (lang: string) => {
     changeLanguage(lang)
     setCurrentLang(lang)
+  }
+
+  const handleResetData = async () => {
+    setIsResetting(true)
+    try {
+      const result = await resetAllData()
+      if (result.success) {
+        await sync()
+        addToast({
+          type: 'success',
+          message: `${t('settings.resetDataSuccess')} (${t('settings.deleted')}: ${result.participantsDeleted} ${t('nav.participants')}, ${result.groupsDeleted} ${t('nav.groups')}, ${result.roomsDeleted} ${t('nav.rooms')})`
+        })
+        setShowResetDialog(false)
+      } else {
+        addToast({ type: 'error', message: result.error || t('settings.resetDataFailed') })
+      }
+    } catch (error) {
+      addToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : t('settings.resetDataFailed')
+      })
+    } finally {
+      setIsResetting(false)
+    }
   }
 
   if (isLoading) {
@@ -81,7 +113,7 @@ function SettingsPage(): React.ReactElement {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto space-y-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[#050505] mb-2">{t('settings.title')}</h1>
         <p className="text-[#65676B]">{t('settings.databaseSettings')}</p>
@@ -89,7 +121,7 @@ function SettingsPage(): React.ReactElement {
 
       {message && (
         <div
-          className={`mb-6 p-4 rounded-md border ${
+          className={`p-4 rounded-md border ${
             message.type === 'success'
               ? 'bg-[#EFFFF6] border-[#31A24C] text-[#31A24C]'
               : 'bg-[#FFEBEE] border-[#FA383E] text-[#FA383E]'
@@ -100,8 +132,7 @@ function SettingsPage(): React.ReactElement {
       )}
 
       {/* Language Settings */}
-      <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm p-6 mb-6">
-        <h2 className="text-lg font-bold text-[#050505] mb-4">{t('settings.language')}</h2>
+      <SectionCard title={t('settings.language')}>
         <div className="flex gap-3">
           <button
             onClick={() => handleLanguageChange('ko')}
@@ -124,11 +155,10 @@ function SettingsPage(): React.ReactElement {
             🇺🇸 {t('settings.english')}
           </button>
         </div>
-      </div>
+      </SectionCard>
 
-      <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm p-6">
-        <h2 className="text-lg font-bold text-[#050505] mb-4">Firebase Configuration</h2>
-
+      {/* Firebase Configuration */}
+      <SectionCard title={t('settings.firebaseConfig')}>
         {isConfigured ? (
           <div className="space-y-4">
             <div className="flex items-center gap-3 p-4 bg-[#EFFFF6] border border-[#31A24C]/30 rounded-md">
@@ -189,10 +219,8 @@ function SettingsPage(): React.ReactElement {
                 </svg>
               </div>
               <div>
-                <p className="font-semibold text-[#FFA000]">Not Configured</p>
-                <p className="text-sm text-[#FFB300]">
-                  Please import a Firebase configuration JSON file
-                </p>
+                <p className="font-semibold text-[#FFA000]">{t('settings.disconnected')}</p>
+                <p className="text-sm text-[#FFB300]">{t('settings.pleaseImportConfig')}</p>
               </div>
             </div>
 
@@ -212,21 +240,62 @@ function SettingsPage(): React.ReactElement {
             </button>
           </div>
         )}
-      </div>
+      </SectionCard>
 
-      <div className="mt-6 bg-white rounded-lg p-6 border border-[#DADDE1] shadow-sm">
-        <h3 className="font-bold text-[#050505] mb-3">How to get Firebase credentials</h3>
+      {/* Data Management */}
+      {isConfigured && (
+        <SectionCard
+          title={t('settings.dataManagement')}
+          description={t('settings.resetDataDesc')}
+          variant="danger"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#FA383E]/20 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-5 h-5 text-[#FA383E]"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </div>
+              <div>
+                <p className="font-semibold text-[#050505]">{t('settings.resetData')}</p>
+                <p className="text-sm text-[#65676B]">{t('settings.resetDataWarning')}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowResetDialog(true)}
+              className="px-4 py-2 bg-[#FA383E] text-white rounded-md font-semibold hover:bg-[#E53935] transition-colors"
+            >
+              {t('settings.resetData')}
+            </button>
+          </div>
+        </SectionCard>
+      )}
+
+      {/* Firebase Setup Help */}
+      <SectionCard title={t('settings.howToGetCredentials')}>
         <ol className="text-sm text-[#65676B] space-y-2 list-decimal list-inside">
-          <li>Go to the Firebase Console (console.firebase.google.com)</li>
-          <li>Select your project (or create a new one)</li>
-          <li>Click the gear icon → Project settings</li>
-          <li>Scroll down to "Your apps" section</li>
-          <li>If no web app exists, click "Add app" and select Web</li>
-          <li>Download or copy the config as a JSON file</li>
+          <li>{t('settings.step1')}</li>
+          <li>{t('settings.step2')}</li>
+          <li>{t('settings.step3')}</li>
+          <li>{t('settings.step4')}</li>
+          <li>{t('settings.step5')}</li>
+          <li>{t('settings.step6')}</li>
         </ol>
 
         <div className="mt-4 p-4 bg-[#F0F2F5] border border-[#DADDE1] rounded-md">
-          <p className="text-xs font-semibold text-[#65676B] mb-2">Example JSON format:</p>
+          <p className="text-xs font-semibold text-[#65676B] mb-2">
+            {t('settings.exampleJsonFormat')}
+          </p>
           <pre className="text-xs text-[#65676B] overflow-x-auto">
             {`{
   "apiKey": "AIzaSy...",
@@ -238,7 +307,20 @@ function SettingsPage(): React.ReactElement {
 }`}
           </pre>
         </div>
-      </div>
+      </SectionCard>
+
+      {/* Reset Data Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showResetDialog}
+        onClose={() => setShowResetDialog(false)}
+        onConfirm={handleResetData}
+        title={t('settings.resetDataConfirmTitle')}
+        description={`${t('settings.resetDataConfirmDesc')}\n\n• ${t('settings.resetDataConfirmItem1')}\n• ${t('settings.resetDataConfirmItem2')}\n• ${t('settings.resetDataConfirmItem3')}\n\n${t('settings.resetDataConfirmWarning')}`}
+        confirmText={isResetting ? t('settings.resetting') : t('settings.resetData')}
+        variant="danger"
+        confirmationPhrase="DELETE"
+        isLoading={isResetting}
+      />
     </div>
   )
 }

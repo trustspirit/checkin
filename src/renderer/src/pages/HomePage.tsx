@@ -109,9 +109,7 @@ function HomePage(): React.ReactElement {
   return (
     <div className="max-w-xl mx-auto pt-16">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-[#050505] mb-2 tracking-tight">
-          {t('home.title')}
-        </h1>
+        <h1 className="text-3xl font-bold text-[#050505] mb-2 tracking-tight">{t('home.title')}</h1>
         <p className="text-[#65676B]">{t('home.subtitle')}</p>
       </div>
 

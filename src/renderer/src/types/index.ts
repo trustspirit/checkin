@@ -36,20 +36,28 @@ export interface CheckInRecord {
   checkOutTime?: Date
 }
 
+export type GroupTagPreset = 'male' | 'female'
+
 export interface Group {
   id: string
   name: string
   participantCount: number
   expectedCapacity?: number
+  tags?: string[]
   createdAt: Date
   updatedAt: Date
 }
+
+export type RoomGenderType = 'male' | 'female' | 'mixed'
+export type RoomType = 'general' | 'guest' | 'leadership'
 
 export interface Room {
   id: string
   roomNumber: string
   maxCapacity: number
   currentOccupancy: number
+  genderType?: RoomGenderType
+  roomType?: RoomType
   createdAt: Date
   updatedAt: Date
 }

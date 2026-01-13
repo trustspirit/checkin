@@ -46,12 +46,22 @@ export const getGroupById = async (groupId: string): Promise<Group | null> => {
   } as Group
 }
 
+export interface CreateGroupOptions {
+  name: string
+  expectedCapacity?: number
+  tags?: string[]
+}
+
 export const createOrGetGroup = async (
-  groupName: string,
+  nameOrOptions: string | CreateGroupOptions,
   expectedCapacity?: number
 ): Promise<Group> => {
+  // Support both old signature (name, capacity) and new options object
+  const options: CreateGroupOptions =
+    typeof nameOrOptions === 'string' ? { name: nameOrOptions, expectedCapacity } : nameOrOptions
+
   const groupsRef = collection(getDb(), GROUPS_COLLECTION)
-  const q = query(groupsRef, where('name', '==', groupName), limit(1))
+  const q = query(groupsRef, where('name', '==', options.name), limit(1))
   const snapshot = await getDocs(q)
 
   if (!snapshot.empty) {
@@ -67,22 +77,28 @@ export const createOrGetGroup = async (
 
   const newGroupRef = doc(groupsRef)
   const now = Timestamp.now()
-  const newGroup: Omit<Group, 'id' | 'createdAt' | 'updatedAt'> & {
-    createdAt: Timestamp
-    updatedAt: Timestamp
-  } = {
-    name: groupName,
+  const newGroup: Record<string, unknown> = {
+    name: options.name,
     participantCount: 0,
-    expectedCapacity: expectedCapacity || undefined,
     createdAt: now,
     updatedAt: now
+  }
+
+  if (options.expectedCapacity) {
+    newGroup.expectedCapacity = options.expectedCapacity
+  }
+  if (options.tags && options.tags.length > 0) {
+    newGroup.tags = options.tags
   }
 
   await setDoc(newGroupRef, newGroup)
 
   return {
     id: newGroupRef.id,
-    ...newGroup,
+    name: options.name,
+    participantCount: 0,
+    expectedCapacity: options.expectedCapacity,
+    tags: options.tags,
     createdAt: now.toDate(),
     updatedAt: now.toDate()
   }
@@ -127,10 +143,13 @@ export const assignParticipantToGroup = async (
   await batch.commit()
 }
 
-export const updateGroup = async (
-  groupId: string,
-  data: { name?: string; expectedCapacity?: number | null }
-): Promise<Group> => {
+export interface UpdateGroupData {
+  name?: string
+  expectedCapacity?: number | null
+  tags?: string[] | null
+}
+
+export const updateGroup = async (groupId: string, data: UpdateGroupData): Promise<Group> => {
   const groupRef = doc(getDb(), GROUPS_COLLECTION, groupId)
   const groupSnap = await getDoc(groupRef)
 
@@ -149,6 +168,10 @@ export const updateGroup = async (
 
   if (data.expectedCapacity !== undefined) {
     updateData.expectedCapacity = data.expectedCapacity
+  }
+
+  if (data.tags !== undefined) {
+    updateData.tags = data.tags
   }
 
   batch.update(groupRef, updateData)

@@ -7,8 +7,8 @@ import { addToastAtom } from '../stores/toastStore'
 import { userNameAtom } from '../stores/userStore'
 import { createOrGetRoom, deleteRoom } from '../services/firebase'
 import { writeAuditLog } from '../services/auditLog'
-import type { Room } from '../types'
-import { ViewMode, RoomStatus } from '../types'
+import type { Room, RoomGenderType, RoomType } from '../types'
+import { ViewMode } from '../types'
 import { ViewModeToggle, Tooltip, StatusDot, getRoomStatus, ImportCSVPanel } from '../components'
 
 function RoomsPage(): React.ReactElement {
@@ -22,6 +22,8 @@ function RoomsPage(): React.ReactElement {
   const [isAdding, setIsAdding] = useState(false)
   const [newRoomNumber, setNewRoomNumber] = useState('')
   const [newRoomCapacity, setNewRoomCapacity] = useState(4)
+  const [newGenderType, setNewGenderType] = useState<RoomGenderType | ''>('')
+  const [newRoomType, setNewRoomType] = useState<RoomType | ''>('')
   const [isImporting, setIsImporting] = useState(false)
   const [csvInput, setCsvInput] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.List)
@@ -30,11 +32,18 @@ function RoomsPage(): React.ReactElement {
   const handleAddRoom = async () => {
     if (!newRoomNumber.trim()) return
     try {
-      const room = await createOrGetRoom(newRoomNumber.trim(), newRoomCapacity)
+      const room = await createOrGetRoom({
+        roomNumber: newRoomNumber.trim(),
+        maxCapacity: newRoomCapacity,
+        genderType: newGenderType || undefined,
+        roomType: newRoomType || undefined
+      })
       await writeAuditLog(userName || 'Unknown', 'create', 'room', room.id, room.roomNumber)
       addToast({ type: 'success', message: t('room.roomCreated', { number: room.roomNumber }) })
       setNewRoomNumber('')
       setNewRoomCapacity(4)
+      setNewGenderType('')
+      setNewRoomType('')
       setIsAdding(false)
       sync()
     } catch (error) {
@@ -45,7 +54,10 @@ function RoomsPage(): React.ReactElement {
   const handleDeleteRoom = async (room: Room) => {
     const warningMsg =
       room.currentOccupancy > 0
-        ? t('room.confirmDeleteWithParticipants', { number: room.roomNumber, count: room.currentOccupancy })
+        ? t('room.confirmDeleteWithParticipants', {
+            number: room.roomNumber,
+            count: room.currentOccupancy
+          })
         : t('room.confirmDelete', { number: room.roomNumber })
     if (!confirm(warningMsg)) return
     try {
@@ -56,6 +68,22 @@ function RoomsPage(): React.ReactElement {
     } catch (error) {
       addToast({ type: 'error', message: t('toast.deleteFailed') })
     }
+  }
+
+  const parseGenderType = (value: string): RoomGenderType | undefined => {
+    const normalized = value.toLowerCase().trim()
+    if (['male', 'm', '남', '남성'].includes(normalized)) return 'male'
+    if (['female', 'f', '여', '여성'].includes(normalized)) return 'female'
+    if (['mixed', 'mx', '혼성'].includes(normalized)) return 'mixed'
+    return undefined
+  }
+
+  const parseRoomType = (value: string): RoomType | undefined => {
+    const normalized = value.toLowerCase().trim()
+    if (['general', 'g', '일반'].includes(normalized)) return 'general'
+    if (['guest', '게스트'].includes(normalized)) return 'guest'
+    if (['leadership', 'leader', 'l', '리더십', '리더'].includes(normalized)) return 'leadership'
+    return undefined
   }
 
   const handleImportCSV = async () => {
@@ -71,9 +99,16 @@ function RoomsPage(): React.ReactElement {
       const parts = line.split(',').map((p) => p.trim())
       const roomNumber = parts[0]
       const capacity = parseInt(parts[1]) || 4
+      const genderType = parts[2] ? parseGenderType(parts[2]) : undefined
+      const roomType = parts[3] ? parseRoomType(parts[3]) : undefined
       if (!roomNumber) continue
       try {
-        const room = await createOrGetRoom(roomNumber, capacity)
+        const room = await createOrGetRoom({
+          roomNumber,
+          maxCapacity: capacity,
+          genderType,
+          roomType
+        })
         await writeAuditLog(userName || 'Unknown', 'import', 'room', room.id, room.roomNumber)
         created++
       } catch {
@@ -104,9 +139,16 @@ function RoomsPage(): React.ReactElement {
       const parts = line.split(',').map((p) => p.trim())
       const roomNumber = parts[0]
       const capacity = parseInt(parts[1]) || 4
+      const genderType = parts[2] ? parseGenderType(parts[2]) : undefined
+      const roomType = parts[3] ? parseRoomType(parts[3]) : undefined
       if (!roomNumber) continue
       try {
-        const room = await createOrGetRoom(roomNumber, capacity)
+        const room = await createOrGetRoom({
+          roomNumber,
+          maxCapacity: capacity,
+          genderType,
+          roomType
+        })
         await writeAuditLog(userName || 'Unknown', 'import', 'room', room.id, room.roomNumber)
         created++
       } catch {
@@ -129,16 +171,53 @@ function RoomsPage(): React.ReactElement {
     return participants.filter((p) => p.roomId === roomId)
   }
 
-  const getStatusLabel = (status: RoomStatus): string => {
-    switch (status) {
-      case RoomStatus.Full:
-        return t('room.full')
-      case RoomStatus.AlmostFull:
-        return t('room.almostFull')
-      case RoomStatus.Available:
-        return t('room.available')
+  const getGenderTypeLabel = (genderType?: RoomGenderType) => {
+    switch (genderType) {
+      case 'male':
+        return t('room.genderMale')
+      case 'female':
+        return t('room.genderFemale')
+      case 'mixed':
+        return t('room.genderMixed')
       default:
-        return t('participant.unknown')
+        return '-'
+    }
+  }
+
+  const getRoomTypeLabel = (roomType?: RoomType) => {
+    switch (roomType) {
+      case 'general':
+        return t('room.typeGeneral')
+      case 'guest':
+        return t('room.typeGuest')
+      case 'leadership':
+        return t('room.typeLeadership')
+      default:
+        return '-'
+    }
+  }
+
+  const getGenderTypeBadgeColor = (genderType?: RoomGenderType) => {
+    switch (genderType) {
+      case 'male':
+        return 'bg-blue-100 text-blue-700'
+      case 'female':
+        return 'bg-pink-100 text-pink-700'
+      case 'mixed':
+        return 'bg-purple-100 text-purple-700'
+      default:
+        return 'bg-gray-100 text-gray-500'
+    }
+  }
+
+  const getRoomTypeBadgeColor = (roomType?: RoomType) => {
+    switch (roomType) {
+      case 'guest':
+        return 'bg-amber-100 text-amber-700'
+      case 'leadership':
+        return 'bg-emerald-100 text-emerald-700'
+      default:
+        return 'bg-gray-100 text-gray-500'
     }
   }
 
@@ -170,7 +249,7 @@ function RoomsPage(): React.ReactElement {
         <ImportCSVPanel
           title={t('room.importRooms')}
           placeholder={t('room.importPlaceholder')}
-          helpText={t('room.importHelpText')}
+          helpText={t('room.importHelpTextExtended')}
           csvInput={csvInput}
           onCsvInputChange={setCsvInput}
           onFileSelect={handleFileImport}
@@ -185,14 +264,14 @@ function RoomsPage(): React.ReactElement {
       {isAdding && (
         <div className="bg-white rounded-lg border border-[#DADDE1] p-4 mb-6">
           <h3 className="font-semibold text-[#050505] mb-3">{t('room.addNewRoom')}</h3>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <input
               type="text"
               value={newRoomNumber}
               onChange={(e) => setNewRoomNumber(e.target.value)}
               placeholder={t('room.roomNumberPlaceholder')}
               autoFocus
-              className="flex-1 px-3 py-2 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
+              className="flex-1 min-w-[120px] px-3 py-2 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
               onKeyDown={(e) => e.key === 'Enter' && handleAddRoom()}
             />
             <input
@@ -201,13 +280,35 @@ function RoomsPage(): React.ReactElement {
               onChange={(e) => setNewRoomCapacity(parseInt(e.target.value) || 4)}
               min={1}
               placeholder={t('room.capacity')}
-              className="w-24 px-3 py-2 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
+              className="w-20 px-3 py-2 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
             />
+            <select
+              value={newGenderType}
+              onChange={(e) => setNewGenderType(e.target.value as RoomGenderType | '')}
+              className="w-28 px-3 py-2 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
+            >
+              <option value="">{t('room.genderType')}</option>
+              <option value="male">{t('room.genderMale')}</option>
+              <option value="female">{t('room.genderFemale')}</option>
+              <option value="mixed">{t('room.genderMixed')}</option>
+            </select>
+            <select
+              value={newRoomType}
+              onChange={(e) => setNewRoomType(e.target.value as RoomType | '')}
+              className="w-28 px-3 py-2 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
+            >
+              <option value="">{t('room.roomType')}</option>
+              <option value="general">{t('room.typeGeneral')}</option>
+              <option value="guest">{t('room.typeGuest')}</option>
+              <option value="leadership">{t('room.typeLeadership')}</option>
+            </select>
             <button
               onClick={() => {
                 setIsAdding(false)
                 setNewRoomNumber('')
                 setNewRoomCapacity(4)
+                setNewGenderType('')
+                setNewRoomType('')
               }}
               className="px-4 py-2 text-[#65676B] text-sm font-semibold hover:bg-[#F0F2F5] rounded-lg transition-colors"
             >
@@ -230,12 +331,18 @@ function RoomsPage(): React.ReactElement {
           <p className="text-[#65676B] mt-2 text-sm">{t('room.noRoomsDesc')}</p>
         </div>
       ) : viewMode === ViewMode.List ? (
-        <div className="bg-white rounded-lg border border-[#DADDE1]">
+        <div className="bg-white rounded-lg border border-[#DADDE1] overflow-x-auto">
           <table className="w-full">
             <thead className="bg-[#F0F2F5] border-b border-[#DADDE1] rounded-t-lg">
               <tr>
                 <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold rounded-tl-lg">
                   {t('participant.room')}
+                </th>
+                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold">
+                  {t('room.genderType')}
+                </th>
+                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold">
+                  {t('room.roomType')}
                 </th>
                 <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold">
                   {t('room.occupancy')}
@@ -251,7 +358,6 @@ function RoomsPage(): React.ReactElement {
             <tbody>
               {rooms.map((room) => {
                 const roomParticipants = getRoomParticipants(room.id)
-                const status = getRoomStatus(room.currentOccupancy, room.maxCapacity)
                 return (
                   <tr
                     key={room.id}
@@ -264,9 +370,27 @@ function RoomsPage(): React.ReactElement {
                       {t('participant.room')} {room.roomNumber}
                       {hoveredRoomId === room.id && roomParticipants.length > 0 && (
                         <Tooltip
-                          title="Participants"
+                          title={t('nav.participants')}
                           items={roomParticipants.map((p) => ({ id: p.id, name: p.name }))}
                         />
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {room.genderType && (
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-semibold ${getGenderTypeBadgeColor(room.genderType)}`}
+                        >
+                          {getGenderTypeLabel(room.genderType)}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {room.roomType && room.roomType !== 'general' && (
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-semibold ${getRoomTypeBadgeColor(room.roomType)}`}
+                        >
+                          {getRoomTypeLabel(room.roomType)}
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-[#65676B]">
@@ -276,7 +400,9 @@ function RoomsPage(): React.ReactElement {
                       <span
                         className={`px-2 py-1 rounded text-xs font-semibold ${getOccupancyBadgeColor(room)}`}
                       >
-                        {room.currentOccupancy >= room.maxCapacity ? t('room.full') : t('room.available')}
+                        {room.currentOccupancy >= room.maxCapacity
+                          ? t('room.full')
+                          : t('room.available')}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -309,9 +435,11 @@ function RoomsPage(): React.ReactElement {
                 onMouseEnter={() => setHoveredRoomId(room.id)}
                 onMouseLeave={() => setHoveredRoomId(null)}
               >
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start justify-between mb-2">
                   <div>
-                    <h3 className="font-bold text-[#050505] text-lg">{t('participant.room')} {room.roomNumber}</h3>
+                    <h3 className="font-bold text-[#050505] text-lg">
+                      {t('participant.room')} {room.roomNumber}
+                    </h3>
                     <p className="text-sm text-[#65676B]">
                       {room.currentOccupancy} / {room.maxCapacity} {t('room.occupied')}
                     </p>
@@ -319,11 +447,33 @@ function RoomsPage(): React.ReactElement {
                   <StatusDot status={status} />
                 </div>
 
+                {/* Room type badges */}
+                {(room.genderType || (room.roomType && room.roomType !== 'general')) && (
+                  <div className="flex gap-1 mb-2 flex-wrap">
+                    {room.genderType && (
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs font-medium ${getGenderTypeBadgeColor(room.genderType)}`}
+                      >
+                        {getGenderTypeLabel(room.genderType)}
+                      </span>
+                    )}
+                    {room.roomType && room.roomType !== 'general' && (
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs font-medium ${getRoomTypeBadgeColor(room.roomType)}`}
+                      >
+                        {getRoomTypeLabel(room.roomType)}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex justify-between items-center">
                   <span
                     className={`px-2 py-1 rounded text-xs font-semibold ${getOccupancyBadgeColor(room)}`}
                   >
-                    {room.currentOccupancy >= room.maxCapacity ? t('room.full') : t('room.available')}
+                    {room.currentOccupancy >= room.maxCapacity
+                      ? t('room.full')
+                      : t('room.available')}
                   </span>
                   <button
                     onClick={(e) => {
@@ -338,7 +488,7 @@ function RoomsPage(): React.ReactElement {
 
                 {hoveredRoomId === room.id && roomParticipants.length > 0 && (
                   <Tooltip
-                    title="Participants"
+                    title={t('nav.participants')}
                     items={roomParticipants.map((p) => ({ id: p.id, name: p.name }))}
                     position="top"
                   />

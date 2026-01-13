@@ -42,6 +42,7 @@ export {
   updateGroup,
   deleteGroup
 } from './groups'
+export type { CreateGroupOptions, UpdateGroupData } from './groups'
 
 // Room Services
 export {
@@ -52,6 +53,7 @@ export {
   updateRoom,
   deleteRoom
 } from './rooms'
+export type { CreateRoomOptions, UpdateRoomData } from './rooms'
 
 // Real-time Subscriptions
 export { subscribeToParticipants, subscribeToGroups, subscribeToRooms } from './subscriptions'
@@ -59,3 +61,7 @@ export type { DataListener } from './subscriptions'
 
 // CSV Import
 export { importParticipantsFromCSV } from './csvImport'
+
+// Data Reset
+export { resetAllData } from './dataReset'
+export type { ResetResult } from './dataReset'
