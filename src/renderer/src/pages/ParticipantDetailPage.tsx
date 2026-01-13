@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAtomValue, useSetAtom } from 'jotai'
 import {
   checkInParticipant,
@@ -31,6 +31,7 @@ interface EditFormData {
 
 function ParticipantDetailPage(): React.ReactElement {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const participants = useAtomValue(participantsAtom)
   const groups = useAtomValue(groupsAtom)
   const rooms = useAtomValue(roomsAtom)
@@ -420,15 +421,37 @@ function ParticipantDetailPage(): React.ReactElement {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Link
-        to="/"
-        className="inline-flex items-center gap-2 text-[#65676B] hover:text-[#1877F2] mb-6 font-semibold transition-colors"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        Back to search
-      </Link>
+      <div className="flex items-center gap-4 mb-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[#65676B] hover:text-[#050505] hover:bg-[#F0F2F5] rounded-md font-semibold transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          Back
+        </button>
+        <span className="text-[#DADDE1]">|</span>
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 text-[#65676B] hover:text-[#1877F2] font-semibold transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          Go to Search
+        </Link>
+      </div>
 
       <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm p-6 mb-6">
         <div className="flex justify-between items-start mb-6">
