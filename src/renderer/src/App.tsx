@@ -11,6 +11,7 @@ import GroupsPage from './pages/GroupsPage'
 import RoomsPage from './pages/RoomsPage'
 import RoomDetailPage from './pages/RoomDetailPage'
 import GroupDetailPage from './pages/GroupDetailPage'
+import StatisticsPage from './pages/StatisticsPage'
 import AddParticipantModal from './components/AddParticipantModal'
 import ToastContainer from './components/ToastContainer'
 import UserNameModal from './components/UserNameModal'
@@ -113,6 +114,18 @@ function App(): React.ReactElement {
               }
             >
               Rooms
+            </NavLink>
+            <NavLink
+              to="/statistics"
+              className={({ isActive }) =>
+                `relative px-4 flex items-center font-medium text-[15px] transition-colors duration-200 ${
+                  isActive
+                    ? 'text-[#1877F2]'
+                    : 'text-[#65676B] hover:bg-[#F2F2F2] rounded-lg mx-0.5'
+                } ${isActive ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm' : ''}`
+              }
+            >
+              Statistics
             </NavLink>
             <div className="relative" ref={manageMenuRef}>
               <button
@@ -219,6 +232,7 @@ function App(): React.ReactElement {
           <Route path="/rooms/:id" element={<RoomDetailPage />} />
           <Route path="/import" element={<ImportPage />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
+          <Route path="/statistics" element={<StatisticsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>
