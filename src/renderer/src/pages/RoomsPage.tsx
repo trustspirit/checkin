@@ -2,23 +2,46 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useTranslation } from 'react-i18next'
-import { roomsAtom, participantsAtom, syncAtom } from '../stores/dataStore'
+import { participantsAtom, syncAtom } from '../stores/dataStore'
 import { addToastAtom } from '../stores/toastStore'
 import { userNameAtom } from '../stores/userStore'
 import { createOrGetRoom, deleteRoom } from '../services/firebase'
 import { writeAuditLog } from '../services/auditLog'
+import { useRoomFilter } from '../hooks'
 import type { Room, RoomGenderType, RoomType } from '../types'
 import { ViewMode } from '../types'
-import { ViewModeToggle, Tooltip, StatusDot, getRoomStatus, ImportCSVPanel } from '../components'
+import {
+  ViewModeToggle,
+  Tooltip,
+  StatusDot,
+  getRoomStatus,
+  ImportCSVPanel,
+  RoomFilterBar,
+  AddRoomForm
+} from '../components'
 
 function RoomsPage(): React.ReactElement {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const rooms = useAtomValue(roomsAtom)
   const participants = useAtomValue(participantsAtom)
   const sync = useSetAtom(syncAtom)
   const addToast = useSetAtom(addToastAtom)
   const userName = useAtomValue(userNameAtom)
+
+  // Use the filter hook
+  const roomFilter = useRoomFilter()
+  const {
+    filteredAndSortedRooms,
+    totalCount,
+    clearFilters,
+    getGenderTypeLabel,
+    getRoomTypeLabel,
+    getGenderTypeBadgeColor,
+    getRoomTypeBadgeColor,
+    getOccupancyBadgeColor
+  } = roomFilter
+
+  // Local UI state
   const [isAdding, setIsAdding] = useState(false)
   const [newRoomNumber, setNewRoomNumber] = useState('')
   const [newRoomCapacity, setNewRoomCapacity] = useState(4)
@@ -28,14 +51,6 @@ function RoomsPage(): React.ReactElement {
   const [csvInput, setCsvInput] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.List)
   const [hoveredRoomId, setHoveredRoomId] = useState<string | null>(null)
-
-  // Filter and Sort states
-  const [filterGenderType, setFilterGenderType] = useState<RoomGenderType | 'all'>('all')
-  const [filterRoomType, setFilterRoomType] = useState<RoomType | 'all'>('all')
-  const [sortBy, setSortBy] = useState<'roomNumber' | 'genderType' | 'roomType' | 'occupancy'>(
-    'roomNumber'
-  )
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
   const handleAddRoom = async () => {
     if (!newRoomNumber.trim()) return
@@ -54,7 +69,7 @@ function RoomsPage(): React.ReactElement {
       setNewRoomType('')
       setIsAdding(false)
       sync()
-    } catch (error) {
+    } catch {
       addToast({ type: 'error', message: t('toast.createFailed') })
     }
   }
@@ -73,7 +88,7 @@ function RoomsPage(): React.ReactElement {
       await writeAuditLog(userName || 'Unknown', 'delete', 'room', room.id, room.roomNumber)
       addToast({ type: 'success', message: t('room.roomDeleted', { number: room.roomNumber }) })
       sync()
-    } catch (error) {
+    } catch {
       addToast({ type: 'error', message: t('toast.deleteFailed') })
     }
   }
@@ -168,114 +183,13 @@ function RoomsPage(): React.ReactElement {
     sync()
   }
 
-  const getOccupancyBadgeColor = (room: Room) => {
-    const ratio = room.currentOccupancy / room.maxCapacity
-    if (ratio >= 1) return 'bg-[#FFEBEE] text-[#FA383E]'
-    if (ratio >= 0.75) return 'bg-[#FFF3E0] text-[#F57C00]'
-    return 'bg-[#EFFFF6] text-[#31A24C]'
-  }
-
   const getRoomParticipants = (roomId: string) => {
     return participants.filter((p) => p.roomId === roomId)
   }
 
-  const getGenderTypeLabel = (genderType?: RoomGenderType) => {
-    switch (genderType) {
-      case 'male':
-        return t('room.genderMale')
-      case 'female':
-        return t('room.genderFemale')
-      case 'mixed':
-        return t('room.genderMixed')
-      default:
-        return '-'
-    }
-  }
-
-  const getRoomTypeLabel = (roomType?: RoomType) => {
-    switch (roomType) {
-      case 'general':
-        return t('room.typeGeneral')
-      case 'guest':
-        return t('room.typeGuest')
-      case 'leadership':
-        return t('room.typeLeadership')
-      default:
-        return '-'
-    }
-  }
-
-  const getGenderTypeBadgeColor = (genderType?: RoomGenderType) => {
-    switch (genderType) {
-      case 'male':
-        return 'bg-blue-100 text-blue-700'
-      case 'female':
-        return 'bg-pink-100 text-pink-700'
-      case 'mixed':
-        return 'bg-purple-100 text-purple-700'
-      default:
-        return 'bg-gray-100 text-gray-500'
-    }
-  }
-
-  const getRoomTypeBadgeColor = (roomType?: RoomType) => {
-    switch (roomType) {
-      case 'guest':
-        return 'bg-amber-100 text-amber-700'
-      case 'leadership':
-        return 'bg-emerald-100 text-emerald-700'
-      default:
-        return 'bg-gray-100 text-gray-500'
-    }
-  }
-
-  // Filter and sort rooms
-  const filteredAndSortedRooms = React.useMemo(() => {
-    let result = [...rooms]
-
-    // Apply filters
-    if (filterGenderType !== 'all') {
-      result = result.filter((room) => room.genderType === filterGenderType)
-    }
-    if (filterRoomType !== 'all') {
-      result = result.filter((room) => room.roomType === filterRoomType)
-    }
-
-    // Apply sorting
-    result.sort((a, b) => {
-      let comparison = 0
-      switch (sortBy) {
-        case 'roomNumber':
-          comparison = a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true })
-          break
-        case 'genderType':
-          comparison = (a.genderType || '').localeCompare(b.genderType || '')
-          break
-        case 'roomType':
-          comparison = (a.roomType || '').localeCompare(b.roomType || '')
-          break
-        case 'occupancy':
-          comparison = a.currentOccupancy / a.maxCapacity - b.currentOccupancy / b.maxCapacity
-          break
-      }
-      return sortDirection === 'asc' ? comparison : -comparison
-    })
-
-    return result
-  }, [rooms, filterGenderType, filterRoomType, sortBy, sortDirection])
-
-  const clearFilters = () => {
-    setFilterGenderType('all')
-    setFilterRoomType('all')
-    setSortBy('roomNumber')
-    setSortDirection('asc')
-  }
-
-  const hasActiveFilters =
-    filterGenderType !== 'all' || filterRoomType !== 'all' || sortBy !== 'roomNumber'
-
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#050505]">{t('room.title')}</h1>
@@ -298,6 +212,7 @@ function RoomsPage(): React.ReactElement {
         </div>
       </div>
 
+      {/* Import CSV Panel */}
       {isImporting && (
         <ImportCSVPanel
           title={t('room.importRooms')}
@@ -314,147 +229,33 @@ function RoomsPage(): React.ReactElement {
         />
       )}
 
+      {/* Add Room Form */}
       {isAdding && (
-        <div className="bg-white rounded-lg border border-[#DADDE1] p-4 mb-6">
-          <h3 className="font-semibold text-[#050505] mb-3">{t('room.addNewRoom')}</h3>
-          <div className="flex flex-wrap gap-2">
-            <input
-              type="text"
-              value={newRoomNumber}
-              onChange={(e) => setNewRoomNumber(e.target.value)}
-              placeholder={t('room.roomNumberPlaceholder')}
-              autoFocus
-              className="flex-1 min-w-[120px] px-3 py-2 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
-              onKeyDown={(e) => e.key === 'Enter' && handleAddRoom()}
-            />
-            <input
-              type="number"
-              value={newRoomCapacity}
-              onChange={(e) => setNewRoomCapacity(parseInt(e.target.value) || 4)}
-              min={1}
-              placeholder={t('room.capacity')}
-              className="w-20 px-3 py-2 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
-            />
-            <select
-              value={newGenderType}
-              onChange={(e) => setNewGenderType(e.target.value as RoomGenderType | '')}
-              className="w-28 px-3 py-2 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
-            >
-              <option value="">{t('room.genderType')}</option>
-              <option value="male">{t('room.genderMale')}</option>
-              <option value="female">{t('room.genderFemale')}</option>
-              <option value="mixed">{t('room.genderMixed')}</option>
-            </select>
-            <select
-              value={newRoomType}
-              onChange={(e) => setNewRoomType(e.target.value as RoomType | '')}
-              className="w-28 px-3 py-2 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
-            >
-              <option value="">{t('room.roomType')}</option>
-              <option value="general">{t('room.typeGeneral')}</option>
-              <option value="guest">{t('room.typeGuest')}</option>
-              <option value="leadership">{t('room.typeLeadership')}</option>
-            </select>
-            <button
-              onClick={() => {
-                setIsAdding(false)
-                setNewRoomNumber('')
-                setNewRoomCapacity(4)
-                setNewGenderType('')
-                setNewRoomType('')
-              }}
-              className="px-4 py-2 text-[#65676B] text-sm font-semibold hover:bg-[#F0F2F5] rounded-lg transition-colors"
-            >
-              {t('common.cancel')}
-            </button>
-            <button
-              onClick={handleAddRoom}
-              disabled={!newRoomNumber.trim()}
-              className="px-4 py-2 bg-[#1877F2] text-white rounded-lg text-sm font-semibold hover:bg-[#166FE5] transition-colors disabled:opacity-50"
-            >
-              {t('common.add')}
-            </button>
-          </div>
-        </div>
+        <AddRoomForm
+          newRoomNumber={newRoomNumber}
+          onRoomNumberChange={setNewRoomNumber}
+          newRoomCapacity={newRoomCapacity}
+          onRoomCapacityChange={setNewRoomCapacity}
+          newGenderType={newGenderType}
+          onGenderTypeChange={setNewGenderType}
+          newRoomType={newRoomType}
+          onRoomTypeChange={setNewRoomType}
+          onSubmit={handleAddRoom}
+          onCancel={() => {
+            setIsAdding(false)
+            setNewRoomNumber('')
+            setNewRoomCapacity(4)
+            setNewGenderType('')
+            setNewRoomType('')
+          }}
+        />
       )}
 
-      {/* Filter and Sort Controls */}
-      {rooms.length > 0 && (
-        <div className="bg-white rounded-lg border border-[#DADDE1] p-4 mb-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-semibold text-[#65676B]">{t('common.filter')}:</span>
+      {/* Filter and Sort Controls - simplified to single prop! */}
+      {totalCount > 0 && <RoomFilterBar filter={roomFilter} />}
 
-            {/* Gender Type Filter */}
-            <select
-              value={filterGenderType}
-              onChange={(e) => setFilterGenderType(e.target.value as RoomGenderType | 'all')}
-              className="px-3 py-1.5 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
-            >
-              <option value="all">
-                {t('room.genderType')}: {t('common.all')}
-              </option>
-              <option value="male">{t('room.genderMale')}</option>
-              <option value="female">{t('room.genderFemale')}</option>
-              <option value="mixed">{t('room.genderMixed')}</option>
-            </select>
-
-            {/* Room Type Filter */}
-            <select
-              value={filterRoomType}
-              onChange={(e) => setFilterRoomType(e.target.value as RoomType | 'all')}
-              className="px-3 py-1.5 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
-            >
-              <option value="all">
-                {t('room.roomType')}: {t('common.all')}
-              </option>
-              <option value="general">{t('room.typeGeneral')}</option>
-              <option value="guest">{t('room.typeGuest')}</option>
-              <option value="leadership">{t('room.typeLeadership')}</option>
-            </select>
-
-            <span className="text-[#DADDE1]">|</span>
-
-            <span className="text-sm font-semibold text-[#65676B]">{t('common.sort')}:</span>
-
-            {/* Sort By */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              className="px-3 py-1.5 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
-            >
-              <option value="roomNumber">{t('room.roomNumber')}</option>
-              <option value="genderType">{t('room.genderType')}</option>
-              <option value="roomType">{t('room.roomType')}</option>
-              <option value="occupancy">{t('room.occupancy')}</option>
-            </select>
-
-            {/* Sort Direction */}
-            <button
-              onClick={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-              className="px-2 py-1.5 border border-[#DADDE1] rounded-lg text-sm hover:bg-[#F0F2F5] transition-colors"
-              title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
-            >
-              {sortDirection === 'asc' ? '↑' : '↓'}
-            </button>
-
-            {/* Clear Filters */}
-            {hasActiveFilters && (
-              <button
-                onClick={clearFilters}
-                className="px-3 py-1.5 text-[#FA383E] text-sm font-semibold hover:bg-[#FFF5F5] rounded-lg transition-colors"
-              >
-                {t('common.clear')}
-              </button>
-            )}
-
-            <span className="ml-auto text-sm text-[#65676B]">
-              {filteredAndSortedRooms.length} / {rooms.length}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {rooms.length === 0 ? (
+      {/* Content */}
+      {totalCount === 0 ? (
         <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
           <div className="text-[#65676B] text-lg">{t('room.noRooms')}</div>
           <p className="text-[#65676B] mt-2 text-sm">{t('room.noRoomsDesc')}</p>
@@ -470,6 +271,7 @@ function RoomsPage(): React.ReactElement {
           </button>
         </div>
       ) : viewMode === ViewMode.List ? (
+        /* List View */
         <div className="bg-white rounded-lg border border-[#DADDE1] overflow-x-auto">
           <table className="w-full">
             <thead className="bg-[#F0F2F5] border-b border-[#DADDE1] rounded-t-lg">
@@ -562,6 +364,7 @@ function RoomsPage(): React.ReactElement {
           </table>
         </div>
       ) : (
+        /* Card View */
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredAndSortedRooms.map((room) => {
             const roomParticipants = getRoomParticipants(room.id)
@@ -586,7 +389,6 @@ function RoomsPage(): React.ReactElement {
                   <StatusDot status={status} />
                 </div>
 
-                {/* Room type badges */}
                 {(room.genderType || (room.roomType && room.roomType !== 'general')) && (
                   <div className="flex gap-1 mb-2 flex-wrap">
                     {room.genderType && (

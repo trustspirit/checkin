@@ -2,11 +2,12 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useTranslation } from 'react-i18next'
-import { groupsAtom, participantsAtom, syncAtom } from '../stores/dataStore'
+import { participantsAtom, syncAtom } from '../stores/dataStore'
 import { addToastAtom } from '../stores/toastStore'
 import { userNameAtom } from '../stores/userStore'
 import { createOrGetGroup, deleteGroup } from '../services/firebase'
 import { writeAuditLog } from '../services/auditLog'
+import { useGroupFilter } from '../hooks'
 import type { Group } from '../types'
 import { ViewMode, CapacityStatus } from '../types'
 import {
@@ -14,17 +15,25 @@ import {
   Tooltip,
   StatusDot,
   getCapacityStatus,
-  ImportCSVPanel
+  ImportCSVPanel,
+  GroupFilterBar,
+  AddGroupForm
 } from '../components'
 
 function GroupsPage(): React.ReactElement {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const groups = useAtomValue(groupsAtom)
   const participants = useAtomValue(participantsAtom)
   const sync = useSetAtom(syncAtom)
   const addToast = useSetAtom(addToastAtom)
   const userName = useAtomValue(userNameAtom)
+
+  // Use the filter hook
+  const groupFilter = useGroupFilter()
+  const { filteredAndSortedGroups, totalCount, clearFilters, getTagLabel, getTagColor } =
+    groupFilter
+
+  // Local UI state
   const [isAdding, setIsAdding] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
   const [newGroupCapacity, setNewGroupCapacity] = useState('')
@@ -35,59 +44,7 @@ function GroupsPage(): React.ReactElement {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.List)
   const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null)
 
-  // Filter and Sort states
-  const [filterTag, setFilterTag] = useState<string>('all')
-  const [sortBy, setSortBy] = useState<'name' | 'participantCount' | 'tag'>('name')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
-
   const presetTags = ['male', 'female']
-
-  // Get all unique tags from groups
-  const allTags = React.useMemo(() => {
-    const tagSet = new Set<string>()
-    groups.forEach((g) => g.tags?.forEach((t) => tagSet.add(t)))
-    return Array.from(tagSet).sort()
-  }, [groups])
-
-  // Filter and sort groups
-  const filteredAndSortedGroups = React.useMemo(() => {
-    let result = [...groups]
-
-    // Apply tag filter
-    if (filterTag !== 'all') {
-      result = result.filter((group) => group.tags?.includes(filterTag))
-    }
-
-    // Apply sorting
-    result.sort((a, b) => {
-      let comparison = 0
-      switch (sortBy) {
-        case 'name':
-          comparison = a.name.localeCompare(b.name)
-          break
-        case 'participantCount':
-          comparison = a.participantCount - b.participantCount
-          break
-        case 'tag': {
-          const aTag = a.tags?.[0] || ''
-          const bTag = b.tags?.[0] || ''
-          comparison = aTag.localeCompare(bTag)
-          break
-        }
-      }
-      return sortDirection === 'asc' ? comparison : -comparison
-    })
-
-    return result
-  }, [groups, filterTag, sortBy, sortDirection])
-
-  const clearFilters = () => {
-    setFilterTag('all')
-    setSortBy('name')
-    setSortDirection('asc')
-  }
-
-  const hasActiveFilters = filterTag !== 'all' || sortBy !== 'name'
 
   const handleAddGroup = async () => {
     if (!newGroupName.trim()) return
@@ -127,18 +84,6 @@ function GroupsPage(): React.ReactElement {
     setNewGroupTags((prev) => prev.filter((t) => t !== tag))
   }
 
-  const getTagLabel = (tag: string) => {
-    if (tag === 'male') return t('group.tagMale')
-    if (tag === 'female') return t('group.tagFemale')
-    return tag
-  }
-
-  const getTagColor = (tag: string) => {
-    if (tag === 'male') return 'bg-blue-100 text-blue-700'
-    if (tag === 'female') return 'bg-pink-100 text-pink-700'
-    return 'bg-gray-100 text-gray-600'
-  }
-
   const handleDeleteGroup = async (group: Group) => {
     if (!confirm(t('group.confirmDelete', { name: group.name }))) return
     try {
@@ -146,7 +91,7 @@ function GroupsPage(): React.ReactElement {
       await writeAuditLog(userName || 'Unknown', 'delete', 'group', group.id, group.name)
       addToast({ type: 'success', message: t('group.groupDeleted', { name: group.name }) })
       sync()
-    } catch (error) {
+    } catch {
       addToast({ type: 'error', message: t('toast.deleteFailed') })
     }
   }
@@ -174,10 +119,7 @@ function GroupsPage(): React.ReactElement {
       const tags = parts[1] ? parseTagsFromString(parts[1]) : undefined
       if (!name) continue
       try {
-        const group = await createOrGetGroup({
-          name,
-          tags
-        })
+        const group = await createOrGetGroup({ name, tags })
         await writeAuditLog(userName || 'Unknown', 'import', 'group', group.id, group.name)
         created++
       } catch {
@@ -210,10 +152,7 @@ function GroupsPage(): React.ReactElement {
       const tags = parts[1] ? parseTagsFromString(parts[1]) : undefined
       if (!name) continue
       try {
-        const group = await createOrGetGroup({
-          name,
-          tags
-        })
+        const group = await createOrGetGroup({ name, tags })
         await writeAuditLog(userName || 'Unknown', 'import', 'group', group.id, group.name)
         created++
       } catch {
@@ -253,6 +192,7 @@ function GroupsPage(): React.ReactElement {
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#050505]">{t('group.title')}</h1>
@@ -275,6 +215,7 @@ function GroupsPage(): React.ReactElement {
         </div>
       </div>
 
+      {/* Import CSV Panel */}
       {isImporting && (
         <ImportCSVPanel
           title={t('group.importGroups')}
@@ -291,182 +232,38 @@ function GroupsPage(): React.ReactElement {
         />
       )}
 
+      {/* Add Group Form */}
       {isAdding && (
-        <div className="bg-white rounded-lg border border-[#DADDE1] p-4 mb-6">
-          <h3 className="font-semibold text-[#050505] mb-3">{t('group.addNewGroup')}</h3>
-          <div className="space-y-3">
-            <div className="flex gap-2 flex-wrap">
-              <input
-                type="text"
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
-                placeholder={t('group.groupNamePlaceholder')}
-                autoFocus
-                className="flex-1 min-w-[150px] px-3 py-2 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
-                onKeyDown={(e) => e.key === 'Enter' && handleAddGroup()}
-              />
-              <input
-                type="number"
-                value={newGroupCapacity}
-                onChange={(e) => setNewGroupCapacity(e.target.value)}
-                placeholder={t('group.expectedOptional')}
-                min={1}
-                className="w-36 px-3 py-2 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
-                onKeyDown={(e) => e.key === 'Enter' && handleAddGroup()}
-              />
-            </div>
-
-            {/* Tags Section */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-[#65676B] font-medium">{t('group.tags')}:</span>
-              {presetTags.map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => togglePresetTag(tag)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${
-                    newGroupTags.includes(tag)
-                      ? getTagColor(tag)
-                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                  }`}
-                >
-                  {getTagLabel(tag)}
-                </button>
-              ))}
-              <span className="text-[#DADDE1]">|</span>
-              <div className="flex items-center gap-1">
-                <input
-                  type="text"
-                  value={customTagInput}
-                  onChange={(e) => setCustomTagInput(e.target.value)}
-                  placeholder={t('group.addCustomTag')}
-                  className="w-32 px-2 py-1 border border-[#DADDE1] rounded text-xs outline-none focus:ring-1 focus:ring-[#1877F2] focus:border-transparent"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      addCustomTag()
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={addCustomTag}
-                  disabled={!customTagInput.trim()}
-                  className="px-2 py-1 bg-[#E7F3FF] text-[#1877F2] rounded text-xs font-semibold hover:bg-[#D4E8FF] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-
-            {/* Selected Tags */}
-            {newGroupTags.length > 0 && (
-              <div className="flex items-center gap-1 flex-wrap">
-                {newGroupTags.map((tag) => (
-                  <span
-                    key={tag}
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${getTagColor(tag)}`}
-                  >
-                    {getTagLabel(tag)}
-                    <button
-                      type="button"
-                      onClick={() => removeTag(tag)}
-                      className="hover:opacity-70"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => {
-                  setIsAdding(false)
-                  setNewGroupName('')
-                  setNewGroupCapacity('')
-                  setNewGroupTags([])
-                  setCustomTagInput('')
-                }}
-                className="px-4 py-2 text-[#65676B] text-sm font-semibold hover:bg-[#F0F2F5] rounded-lg transition-colors"
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                onClick={handleAddGroup}
-                disabled={!newGroupName.trim()}
-                className="px-4 py-2 bg-[#1877F2] text-white rounded-lg text-sm font-semibold hover:bg-[#166FE5] transition-colors disabled:opacity-50"
-              >
-                {t('common.add')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <AddGroupForm
+          newGroupName={newGroupName}
+          onGroupNameChange={setNewGroupName}
+          newGroupCapacity={newGroupCapacity}
+          onGroupCapacityChange={setNewGroupCapacity}
+          newGroupTags={newGroupTags}
+          customTagInput={customTagInput}
+          onCustomTagInputChange={setCustomTagInput}
+          presetTags={presetTags}
+          onTogglePresetTag={togglePresetTag}
+          onAddCustomTag={addCustomTag}
+          onRemoveTag={removeTag}
+          getTagLabel={getTagLabel}
+          getTagColor={getTagColor}
+          onSubmit={handleAddGroup}
+          onCancel={() => {
+            setIsAdding(false)
+            setNewGroupName('')
+            setNewGroupCapacity('')
+            setNewGroupTags([])
+            setCustomTagInput('')
+          }}
+        />
       )}
 
-      {/* Filter and Sort Controls */}
-      {groups.length > 0 && (
-        <div className="bg-white rounded-lg border border-[#DADDE1] p-4 mb-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-semibold text-[#65676B]">{t('common.filter')}:</span>
+      {/* Filter and Sort Controls - simplified to single prop! */}
+      {totalCount > 0 && <GroupFilterBar filter={groupFilter} />}
 
-            {/* Tag Filter */}
-            <select
-              value={filterTag}
-              onChange={(e) => setFilterTag(e.target.value)}
-              className="px-3 py-1.5 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
-            >
-              <option value="all">{t('group.allTags')}</option>
-              {allTags.map((tag) => (
-                <option key={tag} value={tag}>
-                  {getTagLabel(tag)}
-                </option>
-              ))}
-            </select>
-
-            <span className="text-[#DADDE1]">|</span>
-
-            <span className="text-sm font-semibold text-[#65676B]">{t('common.sort')}:</span>
-
-            {/* Sort By */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              className="px-3 py-1.5 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
-            >
-              <option value="name">{t('common.name')}</option>
-              <option value="participantCount">{t('group.participantCount')}</option>
-              <option value="tag">{t('group.tags')}</option>
-            </select>
-
-            {/* Sort Direction */}
-            <button
-              onClick={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-              className="px-2 py-1.5 border border-[#DADDE1] rounded-lg text-sm hover:bg-[#F0F2F5] transition-colors"
-              title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
-            >
-              {sortDirection === 'asc' ? '↑' : '↓'}
-            </button>
-
-            {/* Clear Filters */}
-            {hasActiveFilters && (
-              <button
-                onClick={clearFilters}
-                className="px-3 py-1.5 text-[#FA383E] text-sm font-semibold hover:bg-[#FFF5F5] rounded-lg transition-colors"
-              >
-                {t('common.clear')}
-              </button>
-            )}
-
-            <span className="ml-auto text-sm text-[#65676B]">
-              {filteredAndSortedGroups.length} / {groups.length}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {groups.length === 0 ? (
+      {/* Content */}
+      {totalCount === 0 ? (
         <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
           <div className="text-[#65676B] text-lg">{t('group.noGroups')}</div>
           <p className="text-[#65676B] mt-2 text-sm">{t('group.noGroupsDesc')}</p>
@@ -482,6 +279,7 @@ function GroupsPage(): React.ReactElement {
           </button>
         </div>
       ) : viewMode === ViewMode.List ? (
+        /* List View */
         <div className="bg-white rounded-lg border border-[#DADDE1] overflow-x-auto">
           <table className="w-full">
             <thead className="bg-[#F0F2F5] border-b border-[#DADDE1] rounded-t-lg">
@@ -563,6 +361,7 @@ function GroupsPage(): React.ReactElement {
           </table>
         </div>
       ) : (
+        /* Card View */
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredAndSortedGroups.map((group) => {
             const groupParticipants = getGroupParticipants(group.id)
@@ -586,7 +385,6 @@ function GroupsPage(): React.ReactElement {
                   <StatusDot status={status} size="md" />
                 </div>
 
-                {/* Tags */}
                 {group.tags && group.tags.length > 0 && (
                   <div className="flex gap-1 mb-2 flex-wrap">
                     {group.tags.map((tag) => (
