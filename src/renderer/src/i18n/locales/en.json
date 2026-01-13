@@ -61,6 +61,12 @@
     "auditLog": "Audit Log",
     "settings": "Settings"
   },
+  "user": {
+    "selectUser": "Select a user",
+    "addNewUser": "Add new user",
+    "enterNewName": "Enter new name",
+    "removeUser": "Remove user"
+  },
   "home": {
     "title": "Participant Check-In",
     "subtitle": "Search by name, email, or phone number",
@@ -341,6 +347,8 @@
     "userSettings": "User Settings",
     "userName": "User Name",
     "enterUserName": "Enter your name",
+    "currentUser": "Current User",
+    "switchUser": "Switch User",
     "databaseSettings": "Database Settings",
     "connectionStatus": "Connection Status",
     "connected": "Connected",

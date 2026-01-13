@@ -65,3 +65,7 @@ export { importParticipantsFromCSV } from './csvImport'
 // Data Reset
 export { resetAllData } from './dataReset'
 export type { ResetResult } from './dataReset'
+
+// Users
+export { fetchUsers, saveUser, removeUser, subscribeToUsers } from './users'
+export type { AppUser } from './users'

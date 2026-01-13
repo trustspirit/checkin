@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSetAtom } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai'
 import { reinitializeFirebase, resetAllData } from '../services/firebase'
 import { syncAtom } from '../stores/dataStore'
 import { addToastAtom } from '../stores/toastStore'
+import { userNameAtom, clearUserNameAtom } from '../stores/userStore'
 import { changeLanguage, getCurrentLanguage } from '../i18n'
 import { ConfirmDialog, SectionCard } from '../components/ui'
 
@@ -11,6 +12,8 @@ function SettingsPage(): React.ReactElement {
   const { t } = useTranslation()
   const sync = useSetAtom(syncAtom)
   const addToast = useSetAtom(addToastAtom)
+  const currentUser = useAtomValue(userNameAtom)
+  const clearUserName = useSetAtom(clearUserNameAtom)
   const [configPath, setConfigPath] = useState<string | null>(null)
   const [isConfigured, setIsConfigured] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -130,6 +133,24 @@ function SettingsPage(): React.ReactElement {
           {message.text}
         </div>
       )}
+
+      {/* Current User */}
+      <SectionCard title={t('settings.currentUser')}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#1877F2] text-white rounded-full flex items-center justify-center font-semibold text-lg">
+              {currentUser?.charAt(0).toUpperCase() || '?'}
+            </div>
+            <span className="font-medium text-[#050505]">{currentUser}</span>
+          </div>
+          <button
+            onClick={() => clearUserName()}
+            className="px-4 py-2 bg-[#E4E6EB] text-[#050505] hover:bg-[#D8DADF] rounded-md font-semibold transition-colors"
+          >
+            {t('settings.switchUser')}
+          </button>
+        </div>
+      </SectionCard>
 
       {/* Language Settings */}
       <SectionCard title={t('settings.language')}>

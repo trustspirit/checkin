@@ -61,6 +61,12 @@
     "auditLog": "변경 이력",
     "settings": "설정"
   },
+  "user": {
+    "selectUser": "사용자 선택",
+    "addNewUser": "새 사용자 추가",
+    "enterNewName": "새 이름 입력",
+    "removeUser": "사용자 삭제"
+  },
   "home": {
     "title": "참가자 체크인",
     "subtitle": "이름, 이메일 또는 전화번호로 검색",
@@ -341,6 +347,8 @@
     "userSettings": "사용자 설정",
     "userName": "사용자 이름",
     "enterUserName": "이름을 입력하세요",
+    "currentUser": "현재 사용자",
+    "switchUser": "사용자 변경",
     "databaseSettings": "데이터베이스 설정",
     "connectionStatus": "연결 상태",
     "connected": "연결됨",
