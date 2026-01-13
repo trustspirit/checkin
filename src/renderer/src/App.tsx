@@ -258,7 +258,7 @@ function App(): React.ReactElement {
           isFabVisible
             ? 'translate-y-0 opacity-100'
             : 'translate-y-20 opacity-0 pointer-events-none'
-        } ${isFabExpanded ? 'px-5 gap-2' : 'w-12'}`}
+        } ${isFabExpanded ? 'pl-4 pr-5' : 'w-12'}`}
         title={t('participant.addParticipant')}
       >
         <svg
@@ -270,13 +270,11 @@ function App(): React.ReactElement {
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
         </svg>
-        <span
-          className={`font-medium text-sm whitespace-nowrap overflow-hidden transition-all duration-300 ${
-            isFabExpanded ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'
-          }`}
-        >
-          {t('participant.addParticipant')}
-        </span>
+        {isFabExpanded && (
+          <span className="font-medium text-sm whitespace-nowrap ml-2 animate-fade-in">
+            {t('participant.addParticipant')}
+          </span>
+        )}
       </button>
 
       <AddParticipantModal
