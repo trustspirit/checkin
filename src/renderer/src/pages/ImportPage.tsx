@@ -111,13 +111,24 @@ function ImportPage(): React.ReactElement {
     }
   }
 
+  // Helper function to create a unique key from name + gender + email
+  const createMatchKey = (name: string, gender: string, email: string): string => {
+    return `${name.trim().toLowerCase()}|${(gender || '').trim().toLowerCase()}|${email.trim().toLowerCase()}`
+  }
+
   const handleImportClick = () => {
     if (preview.length === 0) return
 
     // Check if there are existing participants that might be updated
-    const existingEmails = new Set(existingParticipants.map((p) => p.email.toLowerCase()))
+    // Using name + gender + email combination for duplicate detection
+    const existingKeys = new Set(
+      existingParticipants.map((p) => createMatchKey(p.name, p.gender || '', p.email))
+    )
     const overlappingCount = preview.filter(
-      (row) => row.email && existingEmails.has(row.email.toLowerCase())
+      (row) =>
+        row.name &&
+        row.email &&
+        existingKeys.has(createMatchKey(row.name, row.gender || '', row.email))
     ).length
 
     if (overlappingCount > 0 || existingParticipants.length > 0) {
@@ -155,13 +166,21 @@ function ImportPage(): React.ReactElement {
     }
   }
 
-  // Calculate potential overlaps
-  const existingEmails = new Set(existingParticipants.map((p) => p.email.toLowerCase()))
+  // Calculate potential overlaps using name + gender + email combination
+  const existingMatchKeys = new Set(
+    existingParticipants.map((p) => createMatchKey(p.name, p.gender || '', p.email))
+  )
   const overlappingRecords = preview.filter(
-    (row) => row.email && existingEmails.has(row.email.toLowerCase())
+    (row) =>
+      row.name &&
+      row.email &&
+      existingMatchKeys.has(createMatchKey(row.name, row.gender || '', row.email))
   )
   const newRecords = preview.filter(
-    (row) => !row.email || !existingEmails.has(row.email.toLowerCase())
+    (row) =>
+      !row.name ||
+      !row.email ||
+      !existingMatchKeys.has(createMatchKey(row.name, row.gender || '', row.email))
   )
 
   const handleClearPreview = () => {
@@ -364,7 +383,8 @@ function ImportPage(): React.ReactElement {
             <strong>Metadata:</strong> Any additional columns will be stored as metadata
           </p>
           <p>
-            <strong>Updates:</strong> Existing participants (matched by email) will be updated
+            <strong>Updates:</strong> Existing participants (matched by name + gender + email) will
+            be updated
           </p>
         </div>
 

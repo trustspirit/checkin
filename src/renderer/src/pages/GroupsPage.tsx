@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAtomValue, useSetAtom } from 'jotai'
+import { useTranslation } from 'react-i18next'
 import { groupsAtom, participantsAtom, syncAtom } from '../stores/dataStore'
 import { addToastAtom } from '../stores/toastStore'
 import { userNameAtom } from '../stores/userStore'
@@ -17,6 +18,7 @@ import {
 } from '../components'
 
 function GroupsPage(): React.ReactElement {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const groups = useAtomValue(groupsAtom)
   const participants = useAtomValue(participantsAtom)
@@ -37,25 +39,25 @@ function GroupsPage(): React.ReactElement {
       const capacity = newGroupCapacity.trim() ? parseInt(newGroupCapacity.trim(), 10) : undefined
       const group = await createOrGetGroup(newGroupName.trim(), capacity)
       await writeAuditLog(userName || 'Unknown', 'create', 'group', group.id, group.name)
-      addToast({ type: 'success', message: `Group "${group.name}" created` })
+      addToast({ type: 'success', message: t('group.groupCreated', { name: group.name }) })
       setNewGroupName('')
       setNewGroupCapacity('')
       setIsAdding(false)
       sync()
     } catch (error) {
-      addToast({ type: 'error', message: 'Failed to create group' })
+      addToast({ type: 'error', message: t('toast.createFailed') })
     }
   }
 
   const handleDeleteGroup = async (group: Group) => {
-    if (!confirm(`Delete group "${group.name}"? Participants will be unassigned.`)) return
+    if (!confirm(t('group.confirmDelete', { name: group.name }))) return
     try {
       await deleteGroup(group.id)
       await writeAuditLog(userName || 'Unknown', 'delete', 'group', group.id, group.name)
-      addToast({ type: 'success', message: `Group "${group.name}" deleted` })
+      addToast({ type: 'success', message: t('group.groupDeleted', { name: group.name }) })
       sync()
     } catch (error) {
-      addToast({ type: 'error', message: 'Failed to delete group' })
+      addToast({ type: 'error', message: t('toast.deleteFailed') })
     }
   }
 
@@ -78,7 +80,7 @@ function GroupsPage(): React.ReactElement {
       }
     }
 
-    addToast({ type: 'success', message: `Imported ${created} groups` })
+    addToast({ type: 'success', message: t('group.importedCount', { count: created }) })
     setCsvInput('')
     setIsImporting(false)
     sync()
@@ -109,7 +111,7 @@ function GroupsPage(): React.ReactElement {
       }
     }
 
-    addToast({ type: 'success', message: `Imported ${created} groups from CSV` })
+    addToast({ type: 'success', message: t('group.importedFromCSV', { count: created }) })
     sync()
   }
 
@@ -120,15 +122,15 @@ function GroupsPage(): React.ReactElement {
   const getStatusLabel = (status: CapacityStatus): string => {
     switch (status) {
       case CapacityStatus.Full:
-        return 'Full'
+        return t('room.full')
       case CapacityStatus.AlmostFull:
-        return 'Almost full'
+        return t('room.almostFull')
       case CapacityStatus.Available:
-        return 'Available'
+        return t('room.available')
       case CapacityStatus.NoLimit:
-        return 'No limit'
+        return t('common.noLimit')
       default:
-        return 'Unknown'
+        return t('participant.unknown')
     }
   }
 
@@ -143,8 +145,8 @@ function GroupsPage(): React.ReactElement {
     <div className="max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#050505]">Groups</h1>
-          <p className="text-[#65676B] mt-1">Manage participant groups</p>
+          <h1 className="text-2xl font-bold text-[#050505]">{t('group.title')}</h1>
+          <p className="text-[#65676B] mt-1">{t('group.subtitle')}</p>
         </div>
         <div className="flex gap-2">
           <ViewModeToggle mode={viewMode} onChange={setViewMode} />
@@ -152,22 +154,22 @@ function GroupsPage(): React.ReactElement {
             onClick={() => setIsImporting(!isImporting)}
             className="px-4 py-2 border border-[#DADDE1] text-[#65676B] rounded-lg text-sm font-semibold hover:bg-[#F0F2F5] transition-colors"
           >
-            Import CSV
+            {t('nav.importCSV')}
           </button>
           <button
             onClick={() => setIsAdding(!isAdding)}
             className="px-4 py-2 bg-[#1877F2] text-white rounded-lg text-sm font-semibold hover:bg-[#166FE5] transition-colors"
           >
-            Add Group
+            {t('group.addGroup')}
           </button>
         </div>
       </div>
 
       {isImporting && (
         <ImportCSVPanel
-          title="Import Groups"
-          placeholder="Group A&#10;Group B&#10;Group C"
-          helpText="or paste names below (one per line)"
+          title={t('group.importGroups')}
+          placeholder={t('group.importPlaceholder')}
+          helpText={t('group.importHelpText')}
           csvInput={csvInput}
           onCsvInputChange={setCsvInput}
           onFileSelect={handleFileImport}
@@ -181,13 +183,13 @@ function GroupsPage(): React.ReactElement {
 
       {isAdding && (
         <div className="bg-white rounded-lg border border-[#DADDE1] p-4 mb-6">
-          <h3 className="font-semibold text-[#050505] mb-3">Add New Group</h3>
+          <h3 className="font-semibold text-[#050505] mb-3">{t('group.addNewGroup')}</h3>
           <div className="flex gap-2">
             <input
               type="text"
               value={newGroupName}
               onChange={(e) => setNewGroupName(e.target.value)}
-              placeholder="Group name"
+              placeholder={t('group.groupNamePlaceholder')}
               autoFocus
               className="flex-1 px-3 py-2 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
               onKeyDown={(e) => e.key === 'Enter' && handleAddGroup()}
@@ -196,7 +198,7 @@ function GroupsPage(): React.ReactElement {
               type="number"
               value={newGroupCapacity}
               onChange={(e) => setNewGroupCapacity(e.target.value)}
-              placeholder="Expected (optional)"
+              placeholder={t('group.expectedOptional')}
               min={1}
               className="w-36 px-3 py-2 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
               onKeyDown={(e) => e.key === 'Enter' && handleAddGroup()}
@@ -209,14 +211,14 @@ function GroupsPage(): React.ReactElement {
               }}
               className="px-4 py-2 text-[#65676B] text-sm font-semibold hover:bg-[#F0F2F5] rounded-lg transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleAddGroup}
               disabled={!newGroupName.trim()}
               className="px-4 py-2 bg-[#1877F2] text-white rounded-lg text-sm font-semibold hover:bg-[#166FE5] transition-colors disabled:opacity-50"
             >
-              Add
+              {t('common.add')}
             </button>
           </div>
         </div>
@@ -224,8 +226,8 @@ function GroupsPage(): React.ReactElement {
 
       {groups.length === 0 ? (
         <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
-          <div className="text-[#65676B] text-lg">No groups yet</div>
-          <p className="text-[#65676B] mt-2 text-sm">Add groups to organize participants</p>
+          <div className="text-[#65676B] text-lg">{t('group.noGroups')}</div>
+          <p className="text-[#65676B] mt-2 text-sm">{t('group.noGroupsDesc')}</p>
         </div>
       ) : viewMode === ViewMode.List ? (
         <div className="bg-white rounded-lg border border-[#DADDE1]">
@@ -233,16 +235,16 @@ function GroupsPage(): React.ReactElement {
             <thead className="bg-[#F0F2F5] border-b border-[#DADDE1] rounded-t-lg">
               <tr>
                 <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold rounded-tl-lg">
-                  Name
+                  {t('common.name')}
                 </th>
                 <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold">
-                  Members
+                  {t('common.members')}
                 </th>
                 <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold">
-                  Status
+                  {t('common.status')}
                 </th>
                 <th className="text-right px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold rounded-tr-lg">
-                  Actions
+                  {t('common.actions')}
                 </th>
               </tr>
             </thead>
@@ -269,7 +271,6 @@ function GroupsPage(): React.ReactElement {
                     </td>
                     <td className="px-4 py-3 text-[#65676B]">
                       {formatCapacity(group.participantCount, group.expectedCapacity)}
-                      {group.expectedCapacity && ' expected'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -285,7 +286,7 @@ function GroupsPage(): React.ReactElement {
                         }}
                         className="text-[#FA383E] hover:underline text-sm font-semibold"
                       >
-                        Delete
+                        {t('common.delete')}
                       </button>
                     </td>
                   </tr>
@@ -311,8 +312,7 @@ function GroupsPage(): React.ReactElement {
                   <div>
                     <h3 className="font-bold text-[#050505] text-lg">{group.name}</h3>
                     <p className="text-sm text-[#65676B]">
-                      {formatCapacity(group.participantCount, group.expectedCapacity)}
-                      {group.expectedCapacity ? ' members' : ' members'}
+                      {formatCapacity(group.participantCount, group.expectedCapacity)} {t('common.members')}
                     </p>
                   </div>
                   <StatusDot status={status} size="md" />
@@ -322,7 +322,7 @@ function GroupsPage(): React.ReactElement {
                   <span className="px-2 py-1 rounded text-xs font-semibold bg-[#F0F2F5] text-[#65676B]">
                     {group.expectedCapacity
                       ? `${group.participantCount} / ${group.expectedCapacity}`
-                      : `${group.participantCount} members`}
+                      : `${group.participantCount} ${t('common.members')}`}
                   </span>
                   <button
                     onClick={(e) => {
@@ -331,7 +331,7 @@ function GroupsPage(): React.ReactElement {
                     }}
                     className="text-[#FA383E] hover:underline text-xs font-semibold"
                   >
-                    Delete
+                    {t('common.delete')}
                   </button>
                 </div>
 

@@ -26,9 +26,28 @@ export const importParticipantsFromCSV = async (
   for (const row of rows) {
     if (!row.name || !row.email) continue
 
-    // Check if participant exists by email
-    const q = query(participantsRef, where('email', '==', row.email), limit(1))
+    // Check if participant exists by name + gender + email combination
+    const normalizedName = row.name.trim().toLowerCase()
+    const normalizedGender = (row.gender || '').trim().toLowerCase()
+    const normalizedEmail = row.email.trim().toLowerCase()
+
+    const q = query(
+      participantsRef,
+      where('email', '==', row.email),
+      limit(10) // Get potential matches by email first
+    )
     const snapshot = await getDocs(q)
+
+    // Filter by name, gender, and email match (case-insensitive)
+    const matchingDoc = snapshot.docs.find((docSnap) => {
+      const data = docSnap.data()
+      const docName = (data.name || '').trim().toLowerCase()
+      const docGender = (data.gender || '').trim().toLowerCase()
+      const docEmail = (data.email || '').trim().toLowerCase()
+      return (
+        docName === normalizedName && docGender === normalizedGender && docEmail === normalizedEmail
+      )
+    })
 
     const metadata: Record<string, unknown> = {}
     const knownFields = [
@@ -68,8 +87,8 @@ export const importParticipantsFromCSV = async (
 
     const now = Timestamp.now()
 
-    if (snapshot.empty) {
-      // Create new participant
+    if (!matchingDoc) {
+      // Create new participant (no match found by name + gender + email)
       const newParticipantRef = doc(participantsRef)
       await setDoc(newParticipantRef, {
         name: row.name,
@@ -109,11 +128,10 @@ export const importParticipantsFromCSV = async (
 
       created++
     } else {
-      // Update existing participant
-      const existingDoc = snapshot.docs[0]
-      const existingData = existingDoc.data()
+      // Update existing participant (matched by name + gender + email)
+      const existingData = matchingDoc.data()
 
-      await updateDoc(existingDoc.ref, {
+      await updateDoc(matchingDoc.ref, {
         name: row.name,
         gender: row.gender || existingData.gender,
         age: parseInt(row.age) || existingData.age,

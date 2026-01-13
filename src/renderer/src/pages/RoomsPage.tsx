@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAtomValue, useSetAtom } from 'jotai'
+import { useTranslation } from 'react-i18next'
 import { roomsAtom, participantsAtom, syncAtom } from '../stores/dataStore'
 import { addToastAtom } from '../stores/toastStore'
 import { userNameAtom } from '../stores/userStore'
@@ -11,6 +12,7 @@ import { ViewMode, RoomStatus } from '../types'
 import { ViewModeToggle, Tooltip, StatusDot, getRoomStatus, ImportCSVPanel } from '../components'
 
 function RoomsPage(): React.ReactElement {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const rooms = useAtomValue(roomsAtom)
   const participants = useAtomValue(participantsAtom)
@@ -30,29 +32,29 @@ function RoomsPage(): React.ReactElement {
     try {
       const room = await createOrGetRoom(newRoomNumber.trim(), newRoomCapacity)
       await writeAuditLog(userName || 'Unknown', 'create', 'room', room.id, room.roomNumber)
-      addToast({ type: 'success', message: `Room "${room.roomNumber}" created` })
+      addToast({ type: 'success', message: t('room.roomCreated', { number: room.roomNumber }) })
       setNewRoomNumber('')
       setNewRoomCapacity(4)
       setIsAdding(false)
       sync()
     } catch (error) {
-      addToast({ type: 'error', message: 'Failed to create room' })
+      addToast({ type: 'error', message: t('toast.createFailed') })
     }
   }
 
   const handleDeleteRoom = async (room: Room) => {
     const warningMsg =
       room.currentOccupancy > 0
-        ? `Delete room "${room.roomNumber}"? ${room.currentOccupancy} participants will be unassigned.`
-        : `Delete room "${room.roomNumber}"?`
+        ? t('room.confirmDeleteWithParticipants', { number: room.roomNumber, count: room.currentOccupancy })
+        : t('room.confirmDelete', { number: room.roomNumber })
     if (!confirm(warningMsg)) return
     try {
       await deleteRoom(room.id)
       await writeAuditLog(userName || 'Unknown', 'delete', 'room', room.id, room.roomNumber)
-      addToast({ type: 'success', message: `Room "${room.roomNumber}" deleted` })
+      addToast({ type: 'success', message: t('room.roomDeleted', { number: room.roomNumber }) })
       sync()
     } catch (error) {
-      addToast({ type: 'error', message: 'Failed to delete room' })
+      addToast({ type: 'error', message: t('toast.deleteFailed') })
     }
   }
 
@@ -79,7 +81,7 @@ function RoomsPage(): React.ReactElement {
       }
     }
 
-    addToast({ type: 'success', message: `Imported ${created} rooms` })
+    addToast({ type: 'success', message: t('room.importedCount', { count: created }) })
     setCsvInput('')
     setIsImporting(false)
     sync()
@@ -112,7 +114,7 @@ function RoomsPage(): React.ReactElement {
       }
     }
 
-    addToast({ type: 'success', message: `Imported ${created} rooms from CSV` })
+    addToast({ type: 'success', message: t('room.importedFromCSV', { count: created }) })
     sync()
   }
 
@@ -130,13 +132,13 @@ function RoomsPage(): React.ReactElement {
   const getStatusLabel = (status: RoomStatus): string => {
     switch (status) {
       case RoomStatus.Full:
-        return 'Full'
+        return t('room.full')
       case RoomStatus.AlmostFull:
-        return 'Almost full'
+        return t('room.almostFull')
       case RoomStatus.Available:
-        return 'Available'
+        return t('room.available')
       default:
-        return 'Unknown'
+        return t('participant.unknown')
     }
   }
 
@@ -144,8 +146,8 @@ function RoomsPage(): React.ReactElement {
     <div className="max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#050505]">Rooms</h1>
-          <p className="text-[#65676B] mt-1">Manage accommodation rooms</p>
+          <h1 className="text-2xl font-bold text-[#050505]">{t('room.title')}</h1>
+          <p className="text-[#65676B] mt-1">{t('room.subtitle')}</p>
         </div>
         <div className="flex gap-2">
           <ViewModeToggle mode={viewMode} onChange={setViewMode} />
@@ -153,22 +155,22 @@ function RoomsPage(): React.ReactElement {
             onClick={() => setIsImporting(!isImporting)}
             className="px-4 py-2 border border-[#DADDE1] text-[#65676B] rounded-lg text-sm font-semibold hover:bg-[#F0F2F5] transition-colors"
           >
-            Import CSV
+            {t('nav.importCSV')}
           </button>
           <button
             onClick={() => setIsAdding(!isAdding)}
             className="px-4 py-2 bg-[#1877F2] text-white rounded-lg text-sm font-semibold hover:bg-[#166FE5] transition-colors"
           >
-            Add Room
+            {t('room.addRoom')}
           </button>
         </div>
       </div>
 
       {isImporting && (
         <ImportCSVPanel
-          title="Import Rooms"
-          placeholder="101,4&#10;102,4&#10;103,6"
-          helpText="or paste below (room,capacity per line)"
+          title={t('room.importRooms')}
+          placeholder={t('room.importPlaceholder')}
+          helpText={t('room.importHelpText')}
           csvInput={csvInput}
           onCsvInputChange={setCsvInput}
           onFileSelect={handleFileImport}
@@ -182,13 +184,13 @@ function RoomsPage(): React.ReactElement {
 
       {isAdding && (
         <div className="bg-white rounded-lg border border-[#DADDE1] p-4 mb-6">
-          <h3 className="font-semibold text-[#050505] mb-3">Add New Room</h3>
+          <h3 className="font-semibold text-[#050505] mb-3">{t('room.addNewRoom')}</h3>
           <div className="flex gap-2">
             <input
               type="text"
               value={newRoomNumber}
               onChange={(e) => setNewRoomNumber(e.target.value)}
-              placeholder="Room number"
+              placeholder={t('room.roomNumberPlaceholder')}
               autoFocus
               className="flex-1 px-3 py-2 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
               onKeyDown={(e) => e.key === 'Enter' && handleAddRoom()}
@@ -198,7 +200,7 @@ function RoomsPage(): React.ReactElement {
               value={newRoomCapacity}
               onChange={(e) => setNewRoomCapacity(parseInt(e.target.value) || 4)}
               min={1}
-              placeholder="Capacity"
+              placeholder={t('room.capacity')}
               className="w-24 px-3 py-2 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
             />
             <button
@@ -209,14 +211,14 @@ function RoomsPage(): React.ReactElement {
               }}
               className="px-4 py-2 text-[#65676B] text-sm font-semibold hover:bg-[#F0F2F5] rounded-lg transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleAddRoom}
               disabled={!newRoomNumber.trim()}
               className="px-4 py-2 bg-[#1877F2] text-white rounded-lg text-sm font-semibold hover:bg-[#166FE5] transition-colors disabled:opacity-50"
             >
-              Add
+              {t('common.add')}
             </button>
           </div>
         </div>
@@ -224,8 +226,8 @@ function RoomsPage(): React.ReactElement {
 
       {rooms.length === 0 ? (
         <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
-          <div className="text-[#65676B] text-lg">No rooms yet</div>
-          <p className="text-[#65676B] mt-2 text-sm">Add rooms for participant accommodation</p>
+          <div className="text-[#65676B] text-lg">{t('room.noRooms')}</div>
+          <p className="text-[#65676B] mt-2 text-sm">{t('room.noRoomsDesc')}</p>
         </div>
       ) : viewMode === ViewMode.List ? (
         <div className="bg-white rounded-lg border border-[#DADDE1]">
@@ -233,16 +235,16 @@ function RoomsPage(): React.ReactElement {
             <thead className="bg-[#F0F2F5] border-b border-[#DADDE1] rounded-t-lg">
               <tr>
                 <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold rounded-tl-lg">
-                  Room
+                  {t('participant.room')}
                 </th>
                 <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold">
-                  Occupancy
+                  {t('room.occupancy')}
                 </th>
                 <th className="text-left px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold">
-                  Status
+                  {t('common.status')}
                 </th>
                 <th className="text-right px-4 py-3 text-xs uppercase tracking-wide text-[#65676B] font-semibold rounded-tr-lg">
-                  Actions
+                  {t('common.actions')}
                 </th>
               </tr>
             </thead>
@@ -259,7 +261,7 @@ function RoomsPage(): React.ReactElement {
                     onMouseLeave={() => setHoveredRoomId(null)}
                   >
                     <td className="px-4 py-3 font-medium text-[#050505] relative">
-                      Room {room.roomNumber}
+                      {t('participant.room')} {room.roomNumber}
                       {hoveredRoomId === room.id && roomParticipants.length > 0 && (
                         <Tooltip
                           title="Participants"
@@ -274,7 +276,7 @@ function RoomsPage(): React.ReactElement {
                       <span
                         className={`px-2 py-1 rounded text-xs font-semibold ${getOccupancyBadgeColor(room)}`}
                       >
-                        {room.currentOccupancy >= room.maxCapacity ? 'Full' : 'Available'}
+                        {room.currentOccupancy >= room.maxCapacity ? t('room.full') : t('room.available')}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -285,7 +287,7 @@ function RoomsPage(): React.ReactElement {
                         }}
                         className="text-[#FA383E] hover:underline text-sm font-semibold"
                       >
-                        Delete
+                        {t('common.delete')}
                       </button>
                     </td>
                   </tr>
@@ -309,9 +311,9 @@ function RoomsPage(): React.ReactElement {
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="font-bold text-[#050505] text-lg">Room {room.roomNumber}</h3>
+                    <h3 className="font-bold text-[#050505] text-lg">{t('participant.room')} {room.roomNumber}</h3>
                     <p className="text-sm text-[#65676B]">
-                      {room.currentOccupancy} / {room.maxCapacity} occupied
+                      {room.currentOccupancy} / {room.maxCapacity} {t('room.occupied')}
                     </p>
                   </div>
                   <StatusDot status={status} />
@@ -321,7 +323,7 @@ function RoomsPage(): React.ReactElement {
                   <span
                     className={`px-2 py-1 rounded text-xs font-semibold ${getOccupancyBadgeColor(room)}`}
                   >
-                    {room.currentOccupancy >= room.maxCapacity ? 'Full' : 'Available'}
+                    {room.currentOccupancy >= room.maxCapacity ? t('room.full') : t('room.available')}
                   </span>
                   <button
                     onClick={(e) => {
@@ -330,7 +332,7 @@ function RoomsPage(): React.ReactElement {
                     }}
                     className="text-[#FA383E] hover:underline text-xs font-semibold"
                   >
-                    Delete
+                    {t('common.delete')}
                   </button>
                 </div>
 

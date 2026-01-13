@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { searchParticipants } from '../services/firebase'
 import type { Participant } from '../types'
-import { CheckInStatus } from '../types'
 import {
   SearchResultsSkeleton,
   CheckInStatusBadge,
@@ -10,6 +10,7 @@ import {
 } from '../components'
 
 function HomePage(): React.ReactElement {
+  const { t } = useTranslation()
   const [searchTerm, setSearchTerm] = useState('')
   const [results, setResults] = useState<Participant[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -109,9 +110,9 @@ function HomePage(): React.ReactElement {
     <div className="max-w-xl mx-auto pt-16">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-[#050505] mb-2 tracking-tight">
-          Participant Check-In
+          {t('home.title')}
         </h1>
-        <p className="text-[#65676B]">Search by name, email, or phone number</p>
+        <p className="text-[#65676B]">{t('home.subtitle')}</p>
       </div>
 
       <div className="relative">
@@ -120,7 +121,7 @@ function HomePage(): React.ReactElement {
             ref={searchInputRef}
             type="text"
             className="w-full px-5 py-3 text-lg border-none rounded-full outline-none transition-all shadow-sm bg-white focus:ring-2 focus:ring-[#1877F2]"
-            placeholder="Start typing to search..."
+            placeholder={t('home.searchPlaceholder')}
             value={searchTerm}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
@@ -166,11 +167,11 @@ function HomePage(): React.ReactElement {
                       <span className="font-semibold text-[#050505]">{participant.name}</span>
                       {participant.isPaid ? (
                         <span className="px-1.5 py-0.5 bg-[#EFFFF6] text-[#31A24C] rounded text-xs font-semibold">
-                          Paid
+                          {t('participant.paid')}
                         </span>
                       ) : (
                         <span className="px-1.5 py-0.5 bg-[#FFEBEE] text-[#FA383E] rounded text-xs font-semibold">
-                          Unpaid
+                          {t('participant.unpaid')}
                         </span>
                       )}
                     </div>
@@ -195,7 +196,7 @@ function HomePage(): React.ReactElement {
                     )}
                     {participant.roomNumber && (
                       <span className="px-2 py-0.5 bg-[#F0F2F5] text-[#65676B] rounded text-xs font-semibold">
-                        Room {participant.roomNumber}
+                        {t('participant.room')} {participant.roomNumber}
                       </span>
                     )}
                   </div>
@@ -203,7 +204,7 @@ function HomePage(): React.ReactElement {
               ))
             ) : (
               <div className="px-5 py-4">
-                <div className="text-[#65676B] text-center">No participants found</div>
+                <div className="text-[#65676B] text-center">{t('home.noResults')}</div>
               </div>
             )}
           </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useAtomValue, useSetAtom } from 'jotai'
+import { useTranslation } from 'react-i18next'
 import { participantsAtom, groupsAtom, roomsAtom, syncAtom } from '../stores/dataStore'
 import {
   updateGroup,
@@ -14,6 +15,7 @@ import type { Group } from '../types'
 import { DetailPageSkeleton } from '../components'
 
 function GroupDetailPage(): React.ReactElement {
+  const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const groups = useAtomValue(groupsAtom)
   const rooms = useAtomValue(roomsAtom)
@@ -53,7 +55,7 @@ function GroupDetailPage(): React.ReactElement {
   const handleSaveEdit = async () => {
     if (!group || !id) return
     if (!editGroupName.trim()) {
-      addToast({ type: 'error', message: 'Group name is required' })
+      addToast({ type: 'error', message: t('validation.groupNameRequired') })
       return
     }
 
@@ -82,7 +84,7 @@ function GroupDetailPage(): React.ReactElement {
 
       await sync()
       setIsEditing(false)
-      addToast({ type: 'success', message: 'Group updated successfully' })
+      addToast({ type: 'success', message: t('group.groupUpdated') })
     } catch (error) {
       console.error('Update group error:', error)
       addToast({
@@ -95,7 +97,7 @@ function GroupDetailPage(): React.ReactElement {
   }
 
   const handleRemoveParticipant = async (participantId: string, participantName: string) => {
-    if (!confirm(`Are you sure you want to remove ${participantName} from this group?`)) return
+    if (!confirm(t('participant.removeFromGroup') + ` - ${participantName}?`)) return
 
     try {
       await removeParticipantFromGroup(participantId)
@@ -108,7 +110,7 @@ function GroupDetailPage(): React.ReactElement {
         { group: { from: group?.name, to: null } }
       )
       await sync()
-      addToast({ type: 'success', message: 'Participant removed from group' })
+      addToast({ type: 'success', message: t('group.participantRemoved') })
     } catch (error) {
       console.error('Remove participant error:', error)
       addToast({
@@ -137,7 +139,7 @@ function GroupDetailPage(): React.ReactElement {
       )
       await sync()
       setMovingParticipantId(null)
-      addToast({ type: 'success', message: `Moved to ${targetGroup.name}` })
+      addToast({ type: 'success', message: t('group.movedTo', { name: targetGroup.name }) })
     } catch (error) {
       console.error('Move participant error:', error)
       addToast({
@@ -154,9 +156,9 @@ function GroupDetailPage(): React.ReactElement {
   if (!group) {
     return (
       <div className="text-center py-16">
-        <h2 className="text-xl font-bold text-[#050505] mb-2">Group not found</h2>
+        <h2 className="text-xl font-bold text-[#050505] mb-2">{t('group.groupNotFound')}</h2>
         <Link to="/groups" className="text-[#1877F2] hover:underline font-semibold">
-          Back to groups
+          {t('group.backToGroups')}
         </Link>
       </div>
     )
@@ -171,7 +173,7 @@ function GroupDetailPage(): React.ReactElement {
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
-        Back to groups
+        {t('group.backToGroups')}
       </Link>
 
       <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm p-6 mb-6">
@@ -181,7 +183,7 @@ function GroupDetailPage(): React.ReactElement {
               <div className="flex items-end gap-4">
                 <div>
                   <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
-                    Group Name
+                    {t('group.groupName')}
                   </label>
                   <input
                     type="text"
@@ -192,7 +194,7 @@ function GroupDetailPage(): React.ReactElement {
                 </div>
                 <div>
                   <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
-                    Expected Capacity
+                    {t('group.expectedCapacity')}
                   </label>
                   <input
                     type="number"
@@ -210,7 +212,7 @@ function GroupDetailPage(): React.ReactElement {
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-[#F0F2F5] text-[#65676B]">
                     {group.participantCount}
-                    {group.expectedCapacity ? ` / ${group.expectedCapacity}` : ''} members
+                    {group.expectedCapacity ? ` / ${group.expectedCapacity}` : ''} {t('common.members')}
                   </span>
                   {group.expectedCapacity && (
                     <span
@@ -223,10 +225,10 @@ function GroupDetailPage(): React.ReactElement {
                       }`}
                     >
                       {group.participantCount >= group.expectedCapacity
-                        ? 'Full'
+                        ? t('room.full')
                         : group.participantCount >= group.expectedCapacity * 0.75
-                          ? 'Almost Full'
-                          : 'Available'}
+                          ? t('room.almostFull')
+                          : t('room.available')}
                     </span>
                   )}
                 </div>
@@ -242,14 +244,14 @@ function GroupDetailPage(): React.ReactElement {
                   disabled={isSaving}
                   className="px-4 py-2 border border-[#DADDE1] text-[#65676B] rounded-md font-semibold hover:bg-[#F0F2F5] transition-colors disabled:opacity-50"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleSaveEdit}
                   disabled={isSaving}
                   className="px-4 py-2 bg-[#1877F2] text-white rounded-md font-semibold hover:bg-[#166FE5] transition-colors disabled:opacity-50"
                 >
-                  {isSaving ? 'Saving...' : 'Save'}
+                  {isSaving ? t('common.saving') : t('common.save')}
                 </button>
               </>
             ) : (
@@ -257,7 +259,7 @@ function GroupDetailPage(): React.ReactElement {
                 onClick={() => setIsEditing(true)}
                 className="px-4 py-2 border border-[#DADDE1] text-[#65676B] rounded-md font-semibold hover:bg-[#F0F2F5] transition-colors"
               >
-                Edit Group
+                {t('group.editGroup')}
               </button>
             )}
           </div>
@@ -265,7 +267,7 @@ function GroupDetailPage(): React.ReactElement {
 
         <div>
           <h2 className="text-lg font-bold text-[#050505] mb-4">
-            Members ({groupParticipants.length})
+            {t('group.membersCount', { count: groupParticipants.length })}
           </h2>
 
           {groupParticipants.length > 0 ? (
@@ -316,13 +318,13 @@ function GroupDetailPage(): React.ReactElement {
                         }
                         className="px-3 py-1.5 bg-white border border-[#DADDE1] text-[#1877F2] text-sm font-semibold rounded hover:bg-gray-50 transition-colors"
                       >
-                        Move
+                        {t('common.move')}
                       </button>
 
                       {movingParticipantId === participant.id && (
                         <div className="absolute right-0 mt-2 w-64 bg-white border border-[#DADDE1] rounded-lg shadow-xl py-2 z-20 max-h-64 overflow-y-auto">
                           <div className="px-3 py-2 border-b border-[#DADDE1] text-xs font-bold text-[#65676B] uppercase tracking-wide sticky top-0 bg-white">
-                            Select Group
+                            {t('participant.selectGroup')}
                           </div>
                           {groups
                             .filter((g) => g.id !== group.id)
@@ -342,13 +344,13 @@ function GroupDetailPage(): React.ReactElement {
                                   {targetGroup.name}
                                 </span>
                                 <span className="text-xs px-2 py-0.5 rounded bg-[#F0F2F5] text-[#65676B]">
-                                  {targetGroup.participantCount} members
+                                  {targetGroup.participantCount} {t('common.members')}
                                 </span>
                               </button>
                             ))}
                           {groups.length <= 1 && (
                             <div className="px-4 py-3 text-sm text-[#65676B] text-center">
-                              No other groups available
+                              {t('group.noOtherGroups')}
                             </div>
                           )}
                         </div>
@@ -359,7 +361,7 @@ function GroupDetailPage(): React.ReactElement {
                       onClick={() => handleRemoveParticipant(participant.id, participant.name)}
                       className="px-3 py-1.5 bg-white border border-[#DADDE1] text-[#FA383E] text-sm font-semibold rounded hover:bg-[#FFF5F5] transition-colors"
                     >
-                      Remove
+                      {t('common.remove')}
                     </button>
                   </div>
                 </div>
@@ -367,7 +369,7 @@ function GroupDetailPage(): React.ReactElement {
             </div>
           ) : (
             <div className="text-center py-12 bg-[#F0F2F5] rounded-lg border-2 border-dashed border-[#DADDE1]">
-              <p className="text-[#65676B] font-medium">This group has no members</p>
+              <p className="text-[#65676B] font-medium">{t('group.noMembers')}</p>
             </div>
           )}
         </div>
