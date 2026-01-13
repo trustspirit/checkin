@@ -29,6 +29,14 @@ function RoomsPage(): React.ReactElement {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.List)
   const [hoveredRoomId, setHoveredRoomId] = useState<string | null>(null)
 
+  // Filter and Sort states
+  const [filterGenderType, setFilterGenderType] = useState<RoomGenderType | 'all'>('all')
+  const [filterRoomType, setFilterRoomType] = useState<RoomType | 'all'>('all')
+  const [sortBy, setSortBy] = useState<'roomNumber' | 'genderType' | 'roomType' | 'occupancy'>(
+    'roomNumber'
+  )
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+
   const handleAddRoom = async () => {
     if (!newRoomNumber.trim()) return
     try {
@@ -221,6 +229,51 @@ function RoomsPage(): React.ReactElement {
     }
   }
 
+  // Filter and sort rooms
+  const filteredAndSortedRooms = React.useMemo(() => {
+    let result = [...rooms]
+
+    // Apply filters
+    if (filterGenderType !== 'all') {
+      result = result.filter((room) => room.genderType === filterGenderType)
+    }
+    if (filterRoomType !== 'all') {
+      result = result.filter((room) => room.roomType === filterRoomType)
+    }
+
+    // Apply sorting
+    result.sort((a, b) => {
+      let comparison = 0
+      switch (sortBy) {
+        case 'roomNumber':
+          comparison = a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true })
+          break
+        case 'genderType':
+          comparison = (a.genderType || '').localeCompare(b.genderType || '')
+          break
+        case 'roomType':
+          comparison = (a.roomType || '').localeCompare(b.roomType || '')
+          break
+        case 'occupancy':
+          comparison = a.currentOccupancy / a.maxCapacity - b.currentOccupancy / b.maxCapacity
+          break
+      }
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+
+    return result
+  }, [rooms, filterGenderType, filterRoomType, sortBy, sortDirection])
+
+  const clearFilters = () => {
+    setFilterGenderType('all')
+    setFilterRoomType('all')
+    setSortBy('roomNumber')
+    setSortDirection('asc')
+  }
+
+  const hasActiveFilters =
+    filterGenderType !== 'all' || filterRoomType !== 'all' || sortBy !== 'roomNumber'
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
@@ -325,10 +378,96 @@ function RoomsPage(): React.ReactElement {
         </div>
       )}
 
+      {/* Filter and Sort Controls */}
+      {rooms.length > 0 && (
+        <div className="bg-white rounded-lg border border-[#DADDE1] p-4 mb-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-semibold text-[#65676B]">{t('common.filter')}:</span>
+
+            {/* Gender Type Filter */}
+            <select
+              value={filterGenderType}
+              onChange={(e) => setFilterGenderType(e.target.value as RoomGenderType | 'all')}
+              className="px-3 py-1.5 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
+            >
+              <option value="all">
+                {t('room.genderType')}: {t('common.all')}
+              </option>
+              <option value="male">{t('room.genderMale')}</option>
+              <option value="female">{t('room.genderFemale')}</option>
+              <option value="mixed">{t('room.genderMixed')}</option>
+            </select>
+
+            {/* Room Type Filter */}
+            <select
+              value={filterRoomType}
+              onChange={(e) => setFilterRoomType(e.target.value as RoomType | 'all')}
+              className="px-3 py-1.5 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
+            >
+              <option value="all">
+                {t('room.roomType')}: {t('common.all')}
+              </option>
+              <option value="general">{t('room.typeGeneral')}</option>
+              <option value="guest">{t('room.typeGuest')}</option>
+              <option value="leadership">{t('room.typeLeadership')}</option>
+            </select>
+
+            <span className="text-[#DADDE1]">|</span>
+
+            <span className="text-sm font-semibold text-[#65676B]">{t('common.sort')}:</span>
+
+            {/* Sort By */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="px-3 py-1.5 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
+            >
+              <option value="roomNumber">{t('room.roomNumber')}</option>
+              <option value="genderType">{t('room.genderType')}</option>
+              <option value="roomType">{t('room.roomType')}</option>
+              <option value="occupancy">{t('room.occupancy')}</option>
+            </select>
+
+            {/* Sort Direction */}
+            <button
+              onClick={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+              className="px-2 py-1.5 border border-[#DADDE1] rounded-lg text-sm hover:bg-[#F0F2F5] transition-colors"
+              title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+            >
+              {sortDirection === 'asc' ? '↑' : '↓'}
+            </button>
+
+            {/* Clear Filters */}
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="px-3 py-1.5 text-[#FA383E] text-sm font-semibold hover:bg-[#FFF5F5] rounded-lg transition-colors"
+              >
+                {t('common.clear')}
+              </button>
+            )}
+
+            <span className="ml-auto text-sm text-[#65676B]">
+              {filteredAndSortedRooms.length} / {rooms.length}
+            </span>
+          </div>
+        </div>
+      )}
+
       {rooms.length === 0 ? (
         <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
           <div className="text-[#65676B] text-lg">{t('room.noRooms')}</div>
           <p className="text-[#65676B] mt-2 text-sm">{t('room.noRoomsDesc')}</p>
+        </div>
+      ) : filteredAndSortedRooms.length === 0 ? (
+        <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
+          <div className="text-[#65676B] text-lg">{t('room.noRoomsFiltered')}</div>
+          <button
+            onClick={clearFilters}
+            className="mt-2 text-[#1877F2] hover:underline font-semibold"
+          >
+            {t('common.clearFilters')}
+          </button>
         </div>
       ) : viewMode === ViewMode.List ? (
         <div className="bg-white rounded-lg border border-[#DADDE1] overflow-x-auto">
@@ -356,7 +495,7 @@ function RoomsPage(): React.ReactElement {
               </tr>
             </thead>
             <tbody>
-              {rooms.map((room) => {
+              {filteredAndSortedRooms.map((room) => {
                 const roomParticipants = getRoomParticipants(room.id)
                 return (
                   <tr
@@ -424,7 +563,7 @@ function RoomsPage(): React.ReactElement {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {rooms.map((room) => {
+          {filteredAndSortedRooms.map((room) => {
             const roomParticipants = getRoomParticipants(room.id)
             const status = getRoomStatus(room.currentOccupancy, room.maxCapacity)
             return (

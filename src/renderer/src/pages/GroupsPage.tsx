@@ -35,7 +35,59 @@ function GroupsPage(): React.ReactElement {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.List)
   const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null)
 
+  // Filter and Sort states
+  const [filterTag, setFilterTag] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<'name' | 'participantCount' | 'tag'>('name')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+
   const presetTags = ['male', 'female']
+
+  // Get all unique tags from groups
+  const allTags = React.useMemo(() => {
+    const tagSet = new Set<string>()
+    groups.forEach((g) => g.tags?.forEach((t) => tagSet.add(t)))
+    return Array.from(tagSet).sort()
+  }, [groups])
+
+  // Filter and sort groups
+  const filteredAndSortedGroups = React.useMemo(() => {
+    let result = [...groups]
+
+    // Apply tag filter
+    if (filterTag !== 'all') {
+      result = result.filter((group) => group.tags?.includes(filterTag))
+    }
+
+    // Apply sorting
+    result.sort((a, b) => {
+      let comparison = 0
+      switch (sortBy) {
+        case 'name':
+          comparison = a.name.localeCompare(b.name)
+          break
+        case 'participantCount':
+          comparison = a.participantCount - b.participantCount
+          break
+        case 'tag': {
+          const aTag = a.tags?.[0] || ''
+          const bTag = b.tags?.[0] || ''
+          comparison = aTag.localeCompare(bTag)
+          break
+        }
+      }
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+
+    return result
+  }, [groups, filterTag, sortBy, sortDirection])
+
+  const clearFilters = () => {
+    setFilterTag('all')
+    setSortBy('name')
+    setSortDirection('asc')
+  }
+
+  const hasActiveFilters = filterTag !== 'all' || sortBy !== 'name'
 
   const handleAddGroup = async () => {
     if (!newGroupName.trim()) return
@@ -353,10 +405,81 @@ function GroupsPage(): React.ReactElement {
         </div>
       )}
 
+      {/* Filter and Sort Controls */}
+      {groups.length > 0 && (
+        <div className="bg-white rounded-lg border border-[#DADDE1] p-4 mb-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-semibold text-[#65676B]">{t('common.filter')}:</span>
+
+            {/* Tag Filter */}
+            <select
+              value={filterTag}
+              onChange={(e) => setFilterTag(e.target.value)}
+              className="px-3 py-1.5 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
+            >
+              <option value="all">{t('group.allTags')}</option>
+              {allTags.map((tag) => (
+                <option key={tag} value={tag}>
+                  {getTagLabel(tag)}
+                </option>
+              ))}
+            </select>
+
+            <span className="text-[#DADDE1]">|</span>
+
+            <span className="text-sm font-semibold text-[#65676B]">{t('common.sort')}:</span>
+
+            {/* Sort By */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="px-3 py-1.5 border border-[#DADDE1] rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent bg-white"
+            >
+              <option value="name">{t('common.name')}</option>
+              <option value="participantCount">{t('group.participantCount')}</option>
+              <option value="tag">{t('group.tags')}</option>
+            </select>
+
+            {/* Sort Direction */}
+            <button
+              onClick={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+              className="px-2 py-1.5 border border-[#DADDE1] rounded-lg text-sm hover:bg-[#F0F2F5] transition-colors"
+              title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+            >
+              {sortDirection === 'asc' ? '↑' : '↓'}
+            </button>
+
+            {/* Clear Filters */}
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="px-3 py-1.5 text-[#FA383E] text-sm font-semibold hover:bg-[#FFF5F5] rounded-lg transition-colors"
+              >
+                {t('common.clear')}
+              </button>
+            )}
+
+            <span className="ml-auto text-sm text-[#65676B]">
+              {filteredAndSortedGroups.length} / {groups.length}
+            </span>
+          </div>
+        </div>
+      )}
+
       {groups.length === 0 ? (
         <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
           <div className="text-[#65676B] text-lg">{t('group.noGroups')}</div>
           <p className="text-[#65676B] mt-2 text-sm">{t('group.noGroupsDesc')}</p>
+        </div>
+      ) : filteredAndSortedGroups.length === 0 ? (
+        <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
+          <div className="text-[#65676B] text-lg">{t('group.noGroupsFiltered')}</div>
+          <button
+            onClick={clearFilters}
+            className="mt-2 text-[#1877F2] hover:underline font-semibold"
+          >
+            {t('common.clearFilters')}
+          </button>
         </div>
       ) : viewMode === ViewMode.List ? (
         <div className="bg-white rounded-lg border border-[#DADDE1] overflow-x-auto">
@@ -381,7 +504,7 @@ function GroupsPage(): React.ReactElement {
               </tr>
             </thead>
             <tbody>
-              {groups.map((group) => {
+              {filteredAndSortedGroups.map((group) => {
                 const groupParticipants = getGroupParticipants(group.id)
                 const status = getCapacityStatus(group.participantCount, group.expectedCapacity)
                 return (
@@ -441,7 +564,7 @@ function GroupsPage(): React.ReactElement {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {groups.map((group) => {
+          {filteredAndSortedGroups.map((group) => {
             const groupParticipants = getGroupParticipants(group.id)
             const status = getCapacityStatus(group.participantCount, group.expectedCapacity)
             return (

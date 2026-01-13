@@ -37,6 +37,9 @@
     "goToSearch": "검색으로 이동",
     "clickToChange": "클릭하여 변경",
     "noLimit": "제한 없음",
+    "sort": "정렬",
+    "clear": "초기화",
+    "clearFilters": "필터 초기화",
     "notAssigned": "미배정",
     "select": "선택...",
     "orCreateNew": "또는 새로 생성",
@@ -182,7 +185,10 @@
     "addCustomTag": "커스텀 태그 추가...",
     "tagPlaceholder": "태그 이름 입력",
     "presetTags": "기본 태그",
-    "customTags": "커스텀 태그"
+    "customTags": "커스텀 태그",
+    "noGroupsFiltered": "현재 필터에 맞는 그룹이 없습니다",
+    "filterByTag": "태그 필터",
+    "allTags": "전체 태그"
   },
   "room": {
     "title": "객실",
@@ -225,6 +231,7 @@
     "importHelpText": "또는 아래에 붙여넣으세요 (객실번호,수용인원 형식)",
     "importedCount": "{{count}}개 객실을 가져왔습니다",
     "importedFromCSV": "CSV에서 {{count}}개 객실을 가져왔습니다",
+    "noRoomsFiltered": "현재 필터에 맞는 객실이 없습니다",
     "genderType": "성별 구분",
     "genderMale": "남성",
     "genderFemale": "여성",

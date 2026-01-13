@@ -37,6 +37,9 @@
     "goToSearch": "Go to Search",
     "clickToChange": "Click to change",
     "noLimit": "No limit",
+    "sort": "Sort",
+    "clear": "Clear",
+    "clearFilters": "Clear filters",
     "notAssigned": "Not assigned",
     "select": "Select...",
     "orCreateNew": "Or create new",
@@ -182,7 +185,10 @@
     "addCustomTag": "Add custom tag...",
     "tagPlaceholder": "Enter tag name",
     "presetTags": "Preset Tags",
-    "customTags": "Custom Tags"
+    "customTags": "Custom Tags",
+    "noGroupsFiltered": "No groups match the current filters",
+    "filterByTag": "Filter by Tag",
+    "allTags": "All Tags"
   },
   "room": {
     "title": "Rooms",
@@ -225,6 +231,7 @@
     "importHelpText": "or paste below (room,capacity per line)",
     "importedCount": "Imported {{count}} rooms",
     "importedFromCSV": "Imported {{count}} rooms from CSV",
+    "noRoomsFiltered": "No rooms match the current filters",
     "genderType": "Gender Type",
     "genderMale": "Male",
     "genderFemale": "Female",
