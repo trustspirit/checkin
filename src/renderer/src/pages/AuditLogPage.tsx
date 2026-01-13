@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { subscribeToAuditLogs, clearAuditLogs, AuditLogEntry } from '../services/auditLog'
 import { useSetAtom } from 'jotai'
 import { addToastAtom } from '../stores/toastStore'
@@ -7,6 +8,7 @@ import { AuditLogSkeleton } from '../components'
 import { isFirebaseConfigured } from '../services/firebase'
 
 function AuditLogPage(): React.ReactElement {
+  const { t } = useTranslation()
   const [logs, setLogs] = useState<AuditLogEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<AuditLogEntry['targetType'] | 'all'>('all')
@@ -33,22 +35,22 @@ function AuditLogPage(): React.ReactElement {
   }, [])
 
   const handleClearLogs = useCallback(async () => {
-    if (!confirm('Are you sure you want to clear all audit logs? This cannot be undone.')) return
+    if (!confirm(t('auditLog.confirmClear'))) return
 
     setIsClearing(true)
     try {
       const success = await clearAuditLogs()
       if (success) {
-        addToast({ type: 'success', message: 'Audit logs cleared' })
+        addToast({ type: 'success', message: t('toast.deleteSuccess') })
       } else {
-        addToast({ type: 'error', message: 'Failed to clear logs' })
+        addToast({ type: 'error', message: t('toast.deleteFailed') })
       }
     } catch {
-      addToast({ type: 'error', message: 'Failed to clear logs' })
+      addToast({ type: 'error', message: t('toast.deleteFailed') })
     } finally {
       setIsClearing(false)
     }
-  }, [addToast])
+  }, [addToast, t])
 
   const formatDate = (timestamp: string) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -90,15 +92,13 @@ function AuditLogPage(): React.ReactElement {
       <div className="max-w-5xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-[#050505]">Audit Log</h1>
-            <p className="text-[#65676B] mt-1">Track all changes made in the application</p>
+            <h1 className="text-2xl font-bold text-[#050505]">{t('auditLog.title')}</h1>
+            <p className="text-[#65676B] mt-1">{t('common.noData')}</p>
           </div>
         </div>
         <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
-          <div className="text-[#65676B] text-lg">Database not configured</div>
-          <p className="text-[#65676B] mt-2 text-sm">
-            Please configure Firebase in Settings to enable audit logging
-          </p>
+          <div className="text-[#65676B] text-lg">{t('settings.disconnected')}</div>
+          <p className="text-[#65676B] mt-2 text-sm">{t('settings.importConfig')}</p>
         </div>
       </div>
     )
@@ -112,10 +112,10 @@ function AuditLogPage(): React.ReactElement {
     <div className="max-w-5xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#050505]">Audit Log</h1>
+          <h1 className="text-2xl font-bold text-[#050505]">{t('auditLog.title')}</h1>
           <p className="text-[#65676B] mt-1">
-            Track all changes made in the application
-            <span className="ml-2 text-xs text-[#1877F2]">• Live updates</span>
+            {t('auditLog.details')}
+            <span className="ml-2 text-xs text-[#1877F2]">• Live</span>
           </p>
         </div>
         <div className="flex gap-3">
@@ -127,10 +127,10 @@ function AuditLogPage(): React.ReactElement {
               backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2365676B'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`
             }}
           >
-            <option value="all">All Types</option>
-            <option value="participant">Participants</option>
-            <option value="group">Groups</option>
-            <option value="room">Rooms</option>
+            <option value="all">{t('common.all')}</option>
+            <option value="participant">{t('nav.participants')}</option>
+            <option value="group">{t('nav.groups')}</option>
+            <option value="room">{t('nav.rooms')}</option>
           </select>
           {logs.length > 0 && (
             <button
@@ -138,7 +138,7 @@ function AuditLogPage(): React.ReactElement {
               disabled={isClearing}
               className="px-4 py-2 border border-[#FA383E] text-[#FA383E] rounded-lg text-sm font-semibold hover:bg-[#FFEBEE] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isClearing ? 'Clearing...' : 'Clear All'}
+              {isClearing ? t('common.loading') : t('auditLog.clearAll')}
             </button>
           )}
         </div>
@@ -146,8 +146,8 @@ function AuditLogPage(): React.ReactElement {
 
       {filteredLogs.length === 0 ? (
         <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
-          <div className="text-[#65676B] text-lg">No audit logs found</div>
-          <p className="text-[#65676B] mt-2 text-sm">Changes will appear here as they are made</p>
+          <div className="text-[#65676B] text-lg">{t('auditLog.noLogs')}</div>
+          <p className="text-[#65676B] mt-2 text-sm">{t('common.noData')}</p>
         </div>
       ) : (
         <div className="bg-white rounded-lg border border-[#DADDE1] overflow-hidden">

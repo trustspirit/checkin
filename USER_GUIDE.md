@@ -394,6 +394,7 @@ name,email,gender,age,stake,ward,phoneNumber,groupName,roomNumber
 - **데이터베이스**: Firebase Firestore
 - **라우팅**: React Router DOM 7
 - **차트**: Chart.js + react-chartjs-2
+- **다국어 지원**: i18next + react-i18next
 - **빌드 도구**: Vite + electron-vite
 
 ### 4.2 프로젝트 구조
@@ -434,6 +435,17 @@ services/
 │   └── index.ts           # 모듈 재export
 ├── auditLog.ts            # 감사 로그
 └── csvExport.ts           # CSV 내보내기
+
+hooks/
+├── useStatistics.ts       # 통계 계산 로직
+├── useExportPDF.ts        # PDF 내보내기 로직
+└── index.ts               # 모듈 재export
+
+i18n/
+├── index.ts               # i18n 초기화
+└── locales/
+    ├── en.json            # 영어 번역
+    └── ko.json            # 한국어 번역
 ```
 
 ### 4.4 Firestore 컬렉션 구조

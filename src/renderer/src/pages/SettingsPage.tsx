@@ -1,20 +1,15 @@
 import React, { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { reinitializeFirebase } from '../services/firebase'
-
-interface FirebaseConfig {
-  apiKey: string
-  authDomain: string
-  projectId: string
-  storageBucket: string
-  messagingSenderId: string
-  appId: string
-}
+import { changeLanguage, getCurrentLanguage } from '../i18n'
 
 function SettingsPage(): React.ReactElement {
+  const { t } = useTranslation()
   const [configPath, setConfigPath] = useState<string | null>(null)
   const [isConfigured, setIsConfigured] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [currentLang, setCurrentLang] = useState(getCurrentLanguage())
 
   useEffect(() => {
     loadCurrentConfig()
@@ -72,6 +67,11 @@ function SettingsPage(): React.ReactElement {
     }
   }
 
+  const handleLanguageChange = (lang: string) => {
+    changeLanguage(lang)
+    setCurrentLang(lang)
+  }
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-16">
@@ -83,8 +83,8 @@ function SettingsPage(): React.ReactElement {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#050505] mb-2">Settings</h1>
-        <p className="text-[#65676B]">Configure your Firebase database connection</p>
+        <h1 className="text-2xl font-bold text-[#050505] mb-2">{t('settings.title')}</h1>
+        <p className="text-[#65676B]">{t('settings.databaseSettings')}</p>
       </div>
 
       {message && (
@@ -98,6 +98,33 @@ function SettingsPage(): React.ReactElement {
           {message.text}
         </div>
       )}
+
+      {/* Language Settings */}
+      <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm p-6 mb-6">
+        <h2 className="text-lg font-bold text-[#050505] mb-4">{t('settings.language')}</h2>
+        <div className="flex gap-3">
+          <button
+            onClick={() => handleLanguageChange('ko')}
+            className={`px-4 py-2 rounded-md font-semibold transition-all ${
+              currentLang === 'ko'
+                ? 'bg-[#1877F2] text-white'
+                : 'bg-[#E4E6EB] text-[#050505] hover:bg-[#D8DADF]'
+            }`}
+          >
+            🇰🇷 {t('settings.korean')}
+          </button>
+          <button
+            onClick={() => handleLanguageChange('en')}
+            className={`px-4 py-2 rounded-md font-semibold transition-all ${
+              currentLang === 'en'
+                ? 'bg-[#1877F2] text-white'
+                : 'bg-[#E4E6EB] text-[#050505] hover:bg-[#D8DADF]'
+            }`}
+          >
+            🇺🇸 {t('settings.english')}
+          </button>
+        </div>
+      </div>
 
       <div className="bg-white rounded-lg border border-[#DADDE1] shadow-sm p-6">
         <h2 className="text-lg font-bold text-[#050505] mb-4">Firebase Configuration</h2>
@@ -121,7 +148,7 @@ function SettingsPage(): React.ReactElement {
                 </svg>
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-[#31A24C]">Connected</p>
+                <p className="font-semibold text-[#31A24C]">{t('settings.connected')}</p>
                 <p className="text-sm text-[#31A24C]/80 truncate" title={configPath || ''}>
                   {configPath}
                 </p>
@@ -133,13 +160,13 @@ function SettingsPage(): React.ReactElement {
                 onClick={handleImport}
                 className="px-4 py-2 bg-[#1877F2] text-white rounded-md font-semibold hover:bg-[#166FE5] shadow-sm transition-all"
               >
-                Change Configuration
+                {t('settings.importConfig')}
               </button>
               <button
                 onClick={handleClearConfig}
                 className="px-4 py-2 bg-[#E4E6EB] text-[#050505] rounded-md font-semibold hover:bg-[#D8DADF] transition-colors"
               >
-                Clear Configuration
+                {t('settings.clearConfig')}
               </button>
             </div>
           </div>
@@ -181,7 +208,7 @@ function SettingsPage(): React.ReactElement {
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
                 />
               </svg>
-              Import Configuration File
+              {t('settings.importConfig')}
             </button>
           </div>
         )}

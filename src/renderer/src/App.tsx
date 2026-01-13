@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import { useAtomValue, useSetAtom } from 'jotai'
+import { useTranslation } from 'react-i18next'
 import HomePage from './pages/HomePage'
 import ParticipantDetailPage from './pages/ParticipantDetailPage'
 import ParticipantsListPage from './pages/ParticipantsListPage'
@@ -25,9 +26,13 @@ import {
 import { userNameAtom, setUserNameAtom } from './stores/userStore'
 
 function App(): React.ReactElement {
+  const { t } = useTranslation()
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isManageMenuOpen, setIsManageMenuOpen] = useState(false)
+  const [isFabVisible, setIsFabVisible] = useState(true)
+  const [isFabExpanded, setIsFabExpanded] = useState(false)
   const manageMenuRef = useRef<HTMLDivElement>(null)
+  const lastScrollY = useRef(0)
   const isSyncing = useAtomValue(isSyncingAtom)
   const lastSyncTime = useAtomValue(lastSyncTimeAtom)
   const sync = useSetAtom(syncAtom)
@@ -49,6 +54,20 @@ function App(): React.ReactElement {
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Hide FAB on scroll down, show on scroll up
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+      const isScrollingDown = currentScrollY > lastScrollY.current && currentScrollY > 100
+
+      setIsFabVisible(!isScrollingDown)
+      lastScrollY.current = currentScrollY
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   if (!userName) {
@@ -77,7 +96,7 @@ function App(): React.ReactElement {
                 } ${isActive ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm' : ''}`
               }
             >
-              Search
+              {t('nav.search')}
             </NavLink>
             <NavLink
               to="/participants"
@@ -89,7 +108,7 @@ function App(): React.ReactElement {
                 } ${isActive ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm' : ''}`
               }
             >
-              Participants
+              {t('nav.participants')}
             </NavLink>
             <NavLink
               to="/groups"
@@ -101,7 +120,7 @@ function App(): React.ReactElement {
                 } ${isActive ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm' : ''}`
               }
             >
-              Groups
+              {t('nav.groups')}
             </NavLink>
             <NavLink
               to="/rooms"
@@ -113,7 +132,7 @@ function App(): React.ReactElement {
                 } ${isActive ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm' : ''}`
               }
             >
-              Rooms
+              {t('nav.rooms')}
             </NavLink>
             <NavLink
               to="/statistics"
@@ -125,14 +144,14 @@ function App(): React.ReactElement {
                 } ${isActive ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm' : ''}`
               }
             >
-              Statistics
+              {t('nav.statistics')}
             </NavLink>
             <div className="relative" ref={manageMenuRef}>
               <button
                 onClick={() => setIsManageMenuOpen(!isManageMenuOpen)}
                 className={`relative px-4 h-14 flex items-center font-medium text-[15px] transition-colors duration-200 text-[#65676B] hover:bg-[#F2F2F2] rounded-lg mx-0.5`}
               >
-                More
+                {t('nav.more')}
                 <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -145,18 +164,11 @@ function App(): React.ReactElement {
               {isManageMenuOpen && (
                 <div className="absolute top-full left-0 mt-1 bg-white border border-[#DADDE1] rounded-lg shadow-lg py-1 min-w-[160px] z-50">
                   <NavLink
-                    to="/import"
-                    onClick={() => setIsManageMenuOpen(false)}
-                    className="block px-4 py-2 text-[#050505] hover:bg-[#F0F2F5] text-sm font-medium"
-                  >
-                    Import CSV
-                  </NavLink>
-                  <NavLink
                     to="/audit-log"
                     onClick={() => setIsManageMenuOpen(false)}
                     className="block px-4 py-2 text-[#050505] hover:bg-[#F0F2F5] text-sm font-medium"
                   >
-                    Audit Log
+                    {t('nav.auditLog')}
                   </NavLink>
                 </div>
               )}
@@ -237,13 +249,20 @@ function App(): React.ReactElement {
         </Routes>
       </main>
 
+      {/* Floating Action Button - hides on scroll down, expandable on hover */}
       <button
         onClick={() => setIsAddModalOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-[#1877F2] text-white rounded-full shadow-lg hover:bg-[#166FE5] hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40"
-        title="Add Participant"
+        onMouseEnter={() => setIsFabExpanded(true)}
+        onMouseLeave={() => setIsFabExpanded(false)}
+        className={`fixed bottom-8 right-8 h-12 bg-[#1877F2] text-white rounded-full shadow-lg hover:bg-[#166FE5] hover:shadow-xl flex items-center justify-center z-40 transition-all duration-300 ease-in-out ${
+          isFabVisible
+            ? 'translate-y-0 opacity-100'
+            : 'translate-y-20 opacity-0 pointer-events-none'
+        } ${isFabExpanded ? 'px-5 gap-2' : 'w-12'}`}
+        title={t('participant.addParticipant')}
       >
         <svg
-          className="w-7 h-7"
+          className="w-5 h-5 flex-shrink-0"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -251,6 +270,13 @@ function App(): React.ReactElement {
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
         </svg>
+        <span
+          className={`font-medium text-sm whitespace-nowrap overflow-hidden transition-all duration-300 ${
+            isFabExpanded ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'
+          }`}
+        >
+          {t('participant.addParticipant')}
+        </span>
       </button>
 
       <AddParticipantModal
