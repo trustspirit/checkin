@@ -88,4 +88,5 @@ function AddRoomForm({
   )
 }
 
+export type { AddRoomFormProps }
 export default AddRoomForm

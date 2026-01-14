@@ -40,7 +40,8 @@ export {
   createOrGetGroup,
   assignParticipantToGroup,
   updateGroup,
-  deleteGroup
+  deleteGroup,
+  getGroupsPaginated
 } from './groups'
 export type { CreateGroupOptions, UpdateGroupData } from './groups'
 
@@ -51,13 +52,17 @@ export {
   createOrGetRoom,
   assignParticipantToRoom,
   updateRoom,
-  deleteRoom
+  deleteRoom,
+  getRoomsPaginated
 } from './rooms'
 export type { CreateRoomOptions, UpdateRoomData } from './rooms'
 
 // Real-time Subscriptions
 export { subscribeToParticipants, subscribeToGroups, subscribeToRooms } from './subscriptions'
 export type { DataListener } from './subscriptions'
+
+// Batched Pagination
+export { getParticipantsPaginatedForHook } from './participantsPagination'
 
 // CSV Import
 export { importParticipantsFromCSV } from './csvImport'

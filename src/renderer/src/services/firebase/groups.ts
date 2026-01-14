@@ -10,7 +10,8 @@ import {
   Timestamp,
   writeBatch,
   increment,
-  limit
+  limit,
+  startAfter
 } from 'firebase/firestore'
 import type { Group } from '../../types'
 import { getDb, GROUPS_COLLECTION, PARTICIPANTS_COLLECTION, convertTimestamp } from './config'
@@ -221,4 +222,46 @@ export const deleteGroup = async (groupId: string): Promise<void> => {
   batch.delete(groupRef)
 
   await batch.commit()
+}
+
+/**
+ * Fetches groups with pagination support
+ * @param lastItem The last group from previous fetch (for cursor-based pagination)
+ * @param batchSize Number of groups to fetch
+ * @returns Object with data array and hasMore boolean
+ */
+export const getGroupsPaginated = async (
+  lastItem: Group | null,
+  batchSize: number
+): Promise<{ data: Group[]; hasMore: boolean }> => {
+  const groupsRef = collection(getDb(), GROUPS_COLLECTION)
+
+  let q = query(groupsRef, orderBy('name'), limit(batchSize + 1))
+
+  if (lastItem) {
+    // Get the last document snapshot
+    const lastDocRef = doc(getDb(), GROUPS_COLLECTION, lastItem.id)
+    const lastDocSnap = await getDoc(lastDocRef)
+
+    if (lastDocSnap.exists()) {
+      q = query(groupsRef, orderBy('name'), startAfter(lastDocSnap), limit(batchSize + 1))
+    }
+  }
+
+  const snapshot = await getDocs(q)
+  const docs = snapshot.docs
+  const hasMore = docs.length > batchSize
+  const resultDocs = hasMore ? docs.slice(0, batchSize) : docs
+
+  const groups = resultDocs.map((docSnap) => {
+    const data = docSnap.data()
+    return {
+      id: docSnap.id,
+      ...data,
+      createdAt: convertTimestamp(data.createdAt),
+      updatedAt: convertTimestamp(data.updatedAt)
+    } as Group
+  })
+
+  return { data: groups, hasMore }
 }

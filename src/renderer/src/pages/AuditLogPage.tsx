@@ -1,38 +1,57 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { subscribeToAuditLogs, clearAuditLogs, AuditLogEntry } from '../services/auditLog'
+import { readAuditLogsPaginated, clearAuditLogs } from '../services/auditLog'
+import type { AuditLogEntry } from '../services/auditLog'
 import { useSetAtom } from 'jotai'
 import { addToastAtom } from '../stores/toastStore'
 import { AuditAction, TargetType, AUDIT_ACTION_LABELS, TARGET_TYPE_LABELS } from '../types'
 import { AuditLogSkeleton } from '../components'
 import { isFirebaseConfigured } from '../services/firebase'
+import { useInfiniteScroll } from '../hooks'
 
 function AuditLogPage(): React.ReactElement {
   const { t } = useTranslation()
-  const [logs, setLogs] = useState<AuditLogEntry[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<AuditLogEntry['targetType'] | 'all'>('all')
   const [isClearing, setIsClearing] = useState(false)
   const addToast = useSetAtom(addToastAtom)
 
+  // Infinite scroll for audit logs
+  const {
+    items: logs,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+    refresh
+  } = useInfiniteScroll({
+    pageSize: 50,
+    fetchFunction: readAuditLogsPaginated
+  })
+
+  // Intersection Observer for infinite scroll
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
+  const observerRef = useRef<IntersectionObserver | null>(null)
+
   useEffect(() => {
-    if (!isFirebaseConfigured()) {
-      setIsLoading(false)
-      return
-    }
+    if (!loadMoreRef.current || !hasMore || isLoadingMore) return
 
-    setIsLoading(true)
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+          loadMore()
+        }
+      },
+      { threshold: 0.1 }
+    )
 
-    // Subscribe to real-time audit log updates
-    const unsubscribe = subscribeToAuditLogs((data) => {
-      setLogs(data)
-      setIsLoading(false)
-    }, 200) // Limit to 200 recent logs
+    observerRef.current.observe(loadMoreRef.current)
 
     return () => {
-      unsubscribe()
+      if (observerRef.current) {
+        observerRef.current.disconnect()
+      }
     }
-  }, [])
+  }, [hasMore, isLoadingMore, loadMore])
 
   const handleClearLogs = useCallback(async () => {
     if (!confirm(t('auditLog.confirmClear'))) return
@@ -42,6 +61,7 @@ function AuditLogPage(): React.ReactElement {
       const success = await clearAuditLogs()
       if (success) {
         addToast({ type: 'success', message: t('toast.deleteSuccess') })
+        refresh()
       } else {
         addToast({ type: 'error', message: t('toast.deleteFailed') })
       }
@@ -50,7 +70,7 @@ function AuditLogPage(): React.ReactElement {
     } finally {
       setIsClearing(false)
     }
-  }, [addToast, t])
+  }, [addToast, t, refresh])
 
   const formatDate = (timestamp: string) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -113,10 +133,7 @@ function AuditLogPage(): React.ReactElement {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#050505]">{t('auditLog.title')}</h1>
-          <p className="text-[#65676B] mt-1">
-            {t('auditLog.details')}
-            <span className="ml-2 text-xs text-[#1877F2]">• Live</span>
-          </p>
+          <p className="text-[#65676B] mt-1">{t('auditLog.details')}</p>
         </div>
         <div className="flex gap-3">
           <select
@@ -144,7 +161,7 @@ function AuditLogPage(): React.ReactElement {
         </div>
       </div>
 
-      {filteredLogs.length === 0 ? (
+      {filteredLogs.length === 0 && !isLoading ? (
         <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
           <div className="text-[#65676B] text-lg">{t('auditLog.noLogs')}</div>
           <p className="text-[#65676B] mt-2 text-sm">{t('common.noData')}</p>
@@ -153,6 +170,7 @@ function AuditLogPage(): React.ReactElement {
         <div className="bg-white rounded-lg border border-[#DADDE1] overflow-hidden">
           <div className="px-4 py-2 bg-[#F7F8FA] border-b border-[#DADDE1] text-xs text-[#65676B]">
             Showing {filteredLogs.length} log{filteredLogs.length !== 1 ? 's' : ''}
+            {hasMore && ' (scroll for more)'}
           </div>
           <table className="w-full">
             <thead className="bg-[#F0F2F5] border-b border-[#DADDE1]">
@@ -215,6 +233,20 @@ function AuditLogPage(): React.ReactElement {
               ))}
             </tbody>
           </table>
+          {hasMore && (
+            <div ref={loadMoreRef} className="flex justify-center py-4 border-t border-[#DADDE1]">
+              {isLoadingMore ? (
+                <div className="w-6 h-6 border-2 border-[#DADDE1] border-t-[#1877F2] rounded-full animate-spin" />
+              ) : (
+                <span className="text-[#65676B] text-sm">{t('participant.scrollToLoadMore')}</span>
+              )}
+            </div>
+          )}
+          {!hasMore && filteredLogs.length > 0 && (
+            <div className="px-6 py-4 text-center text-sm text-[#65676B] border-t border-[#DADDE1]">
+              {t('common.allLoaded')}
+            </div>
+          )}
         </div>
       )}
     </div>

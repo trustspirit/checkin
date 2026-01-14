@@ -19,3 +19,6 @@ export * from './Groups'
 
 // Rooms components
 export * from './Rooms'
+
+// Participants list components
+export * from './participants'

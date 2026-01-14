@@ -41,11 +41,19 @@ export type UseGroupFilterReturn = GroupFilterState &
   GroupFilterComputed &
   GroupFilterHelpers
 
+export interface UseGroupFilterOptions {
+  /** Optional external data source. If not provided, uses groupsAtom from store */
+  data?: Group[]
+}
+
 // ============ Hook ============
 
-export function useGroupFilter(): UseGroupFilterReturn {
+export function useGroupFilter(options?: UseGroupFilterOptions): UseGroupFilterReturn {
   const { t } = useTranslation()
-  const groups = useAtomValue(groupsAtom)
+  const groupsFromAtom = useAtomValue(groupsAtom)
+
+  // Use provided data or fall back to atom data
+  const groups = options?.data ?? groupsFromAtom
 
   // State
   const [filterTag, setFilterTag] = useState<GroupTagFilter>('all')

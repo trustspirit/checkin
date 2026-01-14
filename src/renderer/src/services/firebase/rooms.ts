@@ -10,7 +10,8 @@ import {
   Timestamp,
   writeBatch,
   increment,
-  limit
+  limit,
+  startAfter
 } from 'firebase/firestore'
 import type { Room, RoomGenderType, RoomType } from '../../types'
 import { getDb, ROOMS_COLLECTION, PARTICIPANTS_COLLECTION, convertTimestamp } from './config'
@@ -241,4 +242,46 @@ export const deleteRoom = async (roomId: string): Promise<void> => {
   batch.delete(roomRef)
 
   await batch.commit()
+}
+
+/**
+ * Fetches rooms with pagination support
+ * @param lastItem The last room from previous fetch (for cursor-based pagination)
+ * @param batchSize Number of rooms to fetch
+ * @returns Object with data array and hasMore boolean
+ */
+export const getRoomsPaginated = async (
+  lastItem: Room | null,
+  batchSize: number
+): Promise<{ data: Room[]; hasMore: boolean }> => {
+  const roomsRef = collection(getDb(), ROOMS_COLLECTION)
+
+  let q = query(roomsRef, orderBy('roomNumber'), limit(batchSize + 1))
+
+  if (lastItem) {
+    // Get the last document snapshot
+    const lastDocRef = doc(getDb(), ROOMS_COLLECTION, lastItem.id)
+    const lastDocSnap = await getDoc(lastDocRef)
+
+    if (lastDocSnap.exists()) {
+      q = query(roomsRef, orderBy('roomNumber'), startAfter(lastDocSnap), limit(batchSize + 1))
+    }
+  }
+
+  const snapshot = await getDocs(q)
+  const docs = snapshot.docs
+  const hasMore = docs.length > batchSize
+  const resultDocs = hasMore ? docs.slice(0, batchSize) : docs
+
+  const rooms = resultDocs.map((docSnap) => {
+    const data = docSnap.data()
+    return {
+      id: docSnap.id,
+      ...data,
+      createdAt: convertTimestamp(data.createdAt),
+      updatedAt: convertTimestamp(data.updatedAt)
+    } as Room
+  })
+
+  return { data: rooms, hasMore }
 }

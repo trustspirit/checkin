@@ -1,13 +1,18 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useTranslation } from 'react-i18next'
 import { participantsAtom, syncAtom } from '../stores/dataStore'
 import { addToastAtom } from '../stores/toastStore'
 import { userNameAtom } from '../stores/userStore'
-import { createOrGetGroup, deleteGroup } from '../services/firebase'
+import {
+  createOrGetGroup,
+  deleteGroup,
+  getGroupsPaginated,
+  subscribeToGroups
+} from '../services/firebase'
 import { writeAuditLog } from '../services/auditLog'
-import { useGroupFilter } from '../hooks'
+import { useGroupFilter, useBatchedInfiniteScrollWithRealtime } from '../hooks'
 import type { Group } from '../types'
 import { ViewMode, CapacityStatus } from '../types'
 import {
@@ -28,8 +33,23 @@ function GroupsPage(): React.ReactElement {
   const addToast = useSetAtom(addToastAtom)
   const userName = useAtomValue(userNameAtom)
 
-  // Use the filter hook
-  const groupFilter = useGroupFilter()
+  // Batched infinite scroll pagination with realtime sync
+  const {
+    displayedItems: paginatedGroups,
+    isLoading,
+    hasMore,
+    loadMore,
+    refresh
+  } = useBatchedInfiniteScrollWithRealtime<Group>({
+    fetchBatchSize: 1000,
+    displayBatchSize: 100,
+    fetchFunction: getGroupsPaginated,
+    getItemId: (group) => group.id,
+    subscribeFunction: subscribeToGroups
+  })
+
+  // Use the filter hook with paginated data
+  const groupFilter = useGroupFilter({ data: paginatedGroups })
   const { filteredAndSortedGroups, totalCount, clearFilters, getTagLabel, getTagColor } =
     groupFilter
 
@@ -44,7 +64,33 @@ function GroupsPage(): React.ReactElement {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.List)
   const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null)
 
+  // Intersection Observer for infinite scroll
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
+  const observerRef = useRef<IntersectionObserver | null>(null)
+
   const presetTags = ['male', 'female']
+
+  // Setup intersection observer for infinite scroll
+  useEffect(() => {
+    if (!loadMoreRef.current || !hasMore || isLoading) return
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoading) {
+          loadMore()
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    observerRef.current.observe(loadMoreRef.current)
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect()
+      }
+    }
+  }, [hasMore, isLoading, loadMore])
 
   const handleAddGroup = async () => {
     if (!newGroupName.trim()) return
@@ -62,6 +108,7 @@ function GroupsPage(): React.ReactElement {
       setNewGroupTags([])
       setCustomTagInput('')
       setIsAdding(false)
+      refresh()
       sync()
     } catch {
       addToast({ type: 'error', message: t('toast.createFailed') })
@@ -90,6 +137,7 @@ function GroupsPage(): React.ReactElement {
       await deleteGroup(group.id)
       await writeAuditLog(userName || 'Unknown', 'delete', 'group', group.id, group.name)
       addToast({ type: 'success', message: t('group.groupDeleted', { name: group.name }) })
+      refresh()
       sync()
     } catch {
       addToast({ type: 'error', message: t('toast.deleteFailed') })
@@ -130,6 +178,7 @@ function GroupsPage(): React.ReactElement {
     addToast({ type: 'success', message: t('group.importedCount', { count: created }) })
     setCsvInput('')
     setIsImporting(false)
+    refresh()
     sync()
   }
 
@@ -161,6 +210,7 @@ function GroupsPage(): React.ReactElement {
     }
 
     addToast({ type: 'success', message: t('group.importedFromCSV', { count: created }) })
+    refresh()
     sync()
   }
 
@@ -259,16 +309,23 @@ function GroupsPage(): React.ReactElement {
         />
       )}
 
-      {/* Filter and Sort Controls - simplified to single prop! */}
+      {/* Filter and Sort Controls */}
       {totalCount > 0 && <GroupFilterBar filter={groupFilter} />}
 
+      {/* Loading State */}
+      {isLoading && totalCount === 0 && (
+        <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
+          <div className="text-[#65676B] text-lg">{t('common.loading')}</div>
+        </div>
+      )}
+
       {/* Content */}
-      {totalCount === 0 ? (
+      {!isLoading && totalCount === 0 ? (
         <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
           <div className="text-[#65676B] text-lg">{t('group.noGroups')}</div>
           <p className="text-[#65676B] mt-2 text-sm">{t('group.noGroupsDesc')}</p>
         </div>
-      ) : filteredAndSortedGroups.length === 0 ? (
+      ) : filteredAndSortedGroups.length === 0 && totalCount > 0 ? (
         <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
           <div className="text-[#65676B] text-lg">{t('group.noGroupsFiltered')}</div>
           <button
@@ -359,6 +416,19 @@ function GroupsPage(): React.ReactElement {
               })}
             </tbody>
           </table>
+
+          {/* Load More Indicator */}
+          {hasMore && (
+            <div ref={loadMoreRef} className="px-6 py-4 text-center text-sm text-[#65676B]">
+              {isLoading ? t('common.loading') : t('common.scrollForMore')}
+            </div>
+          )}
+
+          {!hasMore && filteredAndSortedGroups.length > 0 && (
+            <div className="px-6 py-4 text-center text-sm text-[#65676B]">
+              {t('common.allLoaded')}
+            </div>
+          )}
         </div>
       ) : (
         /* Card View */
@@ -425,6 +495,15 @@ function GroupsPage(): React.ReactElement {
               </div>
             )
           })}
+
+          {/* Load More Card */}
+          {hasMore && (
+            <div ref={loadMoreRef} className="flex items-center justify-center p-8">
+              <div className="text-sm text-[#65676B]">
+                {isLoading ? t('common.loading') : t('common.scrollForMore')}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

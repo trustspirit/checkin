@@ -46,11 +46,19 @@ export type UseRoomFilterReturn = RoomFilterState &
   RoomFilterComputed &
   RoomFilterHelpers
 
+export interface UseRoomFilterOptions {
+  /** Optional external data source. If not provided, uses roomsAtom from store */
+  data?: Room[]
+}
+
 // ============ Hook ============
 
-export function useRoomFilter(): UseRoomFilterReturn {
+export function useRoomFilter(options?: UseRoomFilterOptions): UseRoomFilterReturn {
   const { t } = useTranslation()
-  const rooms = useAtomValue(roomsAtom)
+  const roomsFromAtom = useAtomValue(roomsAtom)
+
+  // Use provided data or fall back to atom data
+  const rooms = options?.data ?? roomsFromAtom
 
   // State
   const [filterGenderType, setFilterGenderType] = useState<GenderTypeFilter>('all')

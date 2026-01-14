@@ -1,13 +1,18 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useTranslation } from 'react-i18next'
 import { participantsAtom, syncAtom } from '../stores/dataStore'
 import { addToastAtom } from '../stores/toastStore'
 import { userNameAtom } from '../stores/userStore'
-import { createOrGetRoom, deleteRoom } from '../services/firebase'
+import {
+  createOrGetRoom,
+  deleteRoom,
+  getRoomsPaginated,
+  subscribeToRooms
+} from '../services/firebase'
 import { writeAuditLog } from '../services/auditLog'
-import { useRoomFilter } from '../hooks'
+import { useRoomFilter, useBatchedInfiniteScrollWithRealtime } from '../hooks'
 import type { Room, RoomGenderType, RoomType } from '../types'
 import { ViewMode } from '../types'
 import {
@@ -28,8 +33,23 @@ function RoomsPage(): React.ReactElement {
   const addToast = useSetAtom(addToastAtom)
   const userName = useAtomValue(userNameAtom)
 
-  // Use the filter hook
-  const roomFilter = useRoomFilter()
+  // Batched infinite scroll pagination with realtime sync
+  const {
+    displayedItems: paginatedRooms,
+    isLoading,
+    hasMore,
+    loadMore,
+    refresh
+  } = useBatchedInfiniteScrollWithRealtime<Room>({
+    fetchBatchSize: 1000,
+    displayBatchSize: 100,
+    fetchFunction: getRoomsPaginated,
+    getItemId: (room) => room.id,
+    subscribeFunction: subscribeToRooms
+  })
+
+  // Use the filter hook with paginated data
+  const roomFilter = useRoomFilter({ data: paginatedRooms })
   const {
     filteredAndSortedRooms,
     totalCount,
@@ -52,6 +72,32 @@ function RoomsPage(): React.ReactElement {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.List)
   const [hoveredRoomId, setHoveredRoomId] = useState<string | null>(null)
 
+  // Intersection Observer for infinite scroll
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
+  const observerRef = useRef<IntersectionObserver | null>(null)
+
+  // Setup intersection observer for infinite scroll
+  useEffect(() => {
+    if (!loadMoreRef.current || !hasMore || isLoading) return
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoading) {
+          loadMore()
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    observerRef.current.observe(loadMoreRef.current)
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect()
+      }
+    }
+  }, [hasMore, isLoading, loadMore])
+
   const handleAddRoom = async () => {
     if (!newRoomNumber.trim()) return
     try {
@@ -68,6 +114,7 @@ function RoomsPage(): React.ReactElement {
       setNewGenderType('')
       setNewRoomType('')
       setIsAdding(false)
+      refresh()
       sync()
     } catch {
       addToast({ type: 'error', message: t('toast.createFailed') })
@@ -87,6 +134,7 @@ function RoomsPage(): React.ReactElement {
       await deleteRoom(room.id)
       await writeAuditLog(userName || 'Unknown', 'delete', 'room', room.id, room.roomNumber)
       addToast({ type: 'success', message: t('room.roomDeleted', { number: room.roomNumber }) })
+      refresh()
       sync()
     } catch {
       addToast({ type: 'error', message: t('toast.deleteFailed') })
@@ -142,6 +190,7 @@ function RoomsPage(): React.ReactElement {
     addToast({ type: 'success', message: t('room.importedCount', { count: created }) })
     setCsvInput('')
     setIsImporting(false)
+    refresh()
     sync()
   }
 
@@ -180,6 +229,7 @@ function RoomsPage(): React.ReactElement {
     }
 
     addToast({ type: 'success', message: t('room.importedFromCSV', { count: created }) })
+    refresh()
     sync()
   }
 
@@ -251,16 +301,23 @@ function RoomsPage(): React.ReactElement {
         />
       )}
 
-      {/* Filter and Sort Controls - simplified to single prop! */}
+      {/* Filter and Sort Controls */}
       {totalCount > 0 && <RoomFilterBar filter={roomFilter} />}
 
+      {/* Loading State */}
+      {isLoading && totalCount === 0 && (
+        <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
+          <div className="text-[#65676B] text-lg">{t('common.loading')}</div>
+        </div>
+      )}
+
       {/* Content */}
-      {totalCount === 0 ? (
+      {!isLoading && totalCount === 0 ? (
         <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
           <div className="text-[#65676B] text-lg">{t('room.noRooms')}</div>
           <p className="text-[#65676B] mt-2 text-sm">{t('room.noRoomsDesc')}</p>
         </div>
-      ) : filteredAndSortedRooms.length === 0 ? (
+      ) : filteredAndSortedRooms.length === 0 && totalCount > 0 ? (
         <div className="bg-white rounded-lg border border-[#DADDE1] p-12 text-center">
           <div className="text-[#65676B] text-lg">{t('room.noRoomsFiltered')}</div>
           <button
@@ -362,6 +419,19 @@ function RoomsPage(): React.ReactElement {
               })}
             </tbody>
           </table>
+
+          {/* Load More Indicator */}
+          {hasMore && (
+            <div ref={loadMoreRef} className="px-6 py-4 text-center text-sm text-[#65676B]">
+              {isLoading ? t('common.loading') : t('common.scrollForMore')}
+            </div>
+          )}
+
+          {!hasMore && filteredAndSortedRooms.length > 0 && (
+            <div className="px-6 py-4 text-center text-sm text-[#65676B]">
+              {t('common.allLoaded')}
+            </div>
+          )}
         </div>
       ) : (
         /* Card View */
@@ -437,6 +507,15 @@ function RoomsPage(): React.ReactElement {
               </div>
             )
           })}
+
+          {/* Load More Card */}
+          {hasMore && (
+            <div ref={loadMoreRef} className="flex items-center justify-center p-8">
+              <div className="text-sm text-[#65676B]">
+                {isLoading ? t('common.loading') : t('common.scrollForMore')}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
