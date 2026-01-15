@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { searchParticipants } from '../services/firebase'
-import type { Participant } from '../types'
+import { useAtomValue, useSetAtom } from 'jotai'
 import {
-  SearchResultsSkeleton,
-  CheckInStatusBadge,
-  getCheckInStatusFromParticipant
-} from '../components'
+  searchParticipants,
+  checkInParticipant,
+  checkOutParticipant,
+  updateParticipant
+} from '../services/firebase'
+import { writeAuditLog } from '../services/auditLog'
+import { userNameAtom } from '../stores/userStore'
+import { addToastAtom } from '../stores/toastStore'
+import type { Participant } from '../types'
+import { CheckInStatus } from '../types'
+import { SearchResultsSkeleton, getCheckInStatusFromParticipant } from '../components'
 
 function HomePage(): React.ReactElement {
   const { t } = useTranslation()
@@ -16,9 +22,12 @@ function HomePage(): React.ReactElement {
   const [isLoading, setIsLoading] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const [showResults, setShowResults] = useState(false)
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
   const navigate = useNavigate()
   const searchInputRef = useRef<HTMLInputElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
+  const userName = useAtomValue(userNameAtom)
+  const addToast = useSetAtom(addToastAtom)
 
   const performSearch = useCallback(async (term: string) => {
     if (!term.trim()) {
@@ -91,6 +100,88 @@ function HomePage(): React.ReactElement {
     }
   }
 
+  // Quick check-in/check-out handler
+  const handleQuickCheckIn = async (e: React.MouseEvent, participant: Participant) => {
+    e.stopPropagation()
+    setActionLoadingId(`checkin-${participant.id}`)
+
+    try {
+      const status = getCheckInStatusFromParticipant(participant.checkIns)
+
+      if (status === CheckInStatus.CheckedIn) {
+        // Check out
+        const activeCheckIn = participant.checkIns.find((ci) => !ci.checkOutTime)
+        if (activeCheckIn) {
+          await checkOutParticipant(participant.id, activeCheckIn.id)
+          await writeAuditLog(
+            userName || 'Unknown',
+            'check_out',
+            'participant',
+            participant.id,
+            participant.name
+          )
+          addToast({ type: 'success', message: t('toast.checkOutSuccess') })
+        }
+      } else {
+        // Check in
+        await checkInParticipant(participant.id)
+        await writeAuditLog(
+          userName || 'Unknown',
+          'check_in',
+          'participant',
+          participant.id,
+          participant.name
+        )
+        addToast({ type: 'success', message: t('toast.checkInSuccess') })
+      }
+
+      // Refresh search results
+      await performSearch(searchTerm)
+    } catch (error) {
+      console.error('Check-in/out error:', error)
+      addToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : t('toast.actionFailed')
+      })
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
+  // Quick payment status toggle handler
+  const handleQuickPaymentToggle = async (e: React.MouseEvent, participant: Participant) => {
+    e.stopPropagation()
+    setActionLoadingId(`payment-${participant.id}`)
+
+    try {
+      const newPaidStatus = !participant.isPaid
+      await updateParticipant(participant.id, { isPaid: newPaidStatus })
+      await writeAuditLog(
+        userName || 'Unknown',
+        'update',
+        'participant',
+        participant.id,
+        participant.name,
+        { isPaid: { from: participant.isPaid, to: newPaidStatus } }
+      )
+      addToast({
+        type: 'success',
+        message: newPaidStatus ? t('toast.markedAsPaid') : t('toast.markedAsUnpaid')
+      })
+
+      // Refresh search results
+      await performSearch(searchTerm)
+    } catch (error) {
+      console.error('Payment toggle error:', error)
+      addToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : t('toast.actionFailed')
+      })
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -151,55 +242,139 @@ function HomePage(): React.ReactElement {
             {isLoading ? (
               <SearchResultsSkeleton count={3} />
             ) : results.length > 0 ? (
-              results.map((participant, index) => (
-                <div
-                  key={participant.id}
-                  className={`px-4 py-3 cursor-pointer border-b border-[#F0F2F5] last:border-b-0 transition-colors ${
-                    index === selectedIndex ? 'bg-[#F0F2F5]' : 'hover:bg-[#F0F2F5]'
-                  }`}
-                  onClick={() => handleResultClick(participant)}
-                  onMouseEnter={() => setSelectedIndex(index)}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-[#050505]">{participant.name}</span>
-                      {participant.isPaid ? (
-                        <span className="px-1.5 py-0.5 bg-[#EFFFF6] text-[#31A24C] rounded text-xs font-semibold">
-                          {t('participant.paid')}
+              results.map((participant, index) => {
+                const checkInStatus = getCheckInStatusFromParticipant(participant.checkIns)
+                const isCheckedIn = checkInStatus === CheckInStatus.CheckedIn
+                const isCheckInLoading = actionLoadingId === `checkin-${participant.id}`
+                const isPaymentLoading = actionLoadingId === `payment-${participant.id}`
+
+                return (
+                  <div
+                    key={participant.id}
+                    className={`px-4 py-3 cursor-pointer border-b border-[#F0F2F5] last:border-b-0 transition-colors ${
+                      index === selectedIndex ? 'bg-[#F0F2F5]' : 'hover:bg-[#F0F2F5]'
+                    }`}
+                    onClick={() => handleResultClick(participant)}
+                    onMouseEnter={() => setSelectedIndex(index)}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="font-semibold text-[#050505] truncate">
+                          {participant.name}
                         </span>
-                      ) : (
-                        <span className="px-1.5 py-0.5 bg-[#FFEBEE] text-[#FA383E] rounded text-xs font-semibold">
-                          {t('participant.unpaid')}
+                        {participant.ward && (
+                          <span className="text-sm text-[#65676B] truncate hidden sm:inline">
+                            {participant.ward}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Quick Action Buttons */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Payment Toggle Button */}
+                        <button
+                          onClick={(e) => handleQuickPaymentToggle(e, participant)}
+                          disabled={isPaymentLoading}
+                          className={`px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                            participant.isPaid
+                              ? 'bg-[#EFFFF6] text-[#31A24C] hover:bg-[#D4F5DF]'
+                              : 'bg-[#FFEBEE] text-[#FA383E] hover:bg-[#FFD5D8]'
+                          } ${isPaymentLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          title={
+                            participant.isPaid
+                              ? t('participant.markAsUnpaid')
+                              : t('participant.markAsPaid')
+                          }
+                        >
+                          {isPaymentLoading ? (
+                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              />
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                              />
+                            </svg>
+                          ) : participant.isPaid ? (
+                            t('participant.paid')
+                          ) : (
+                            t('participant.unpaid')
+                          )}
+                        </button>
+
+                        {/* Check In/Out Button */}
+                        <button
+                          onClick={(e) => handleQuickCheckIn(e, participant)}
+                          disabled={isCheckInLoading}
+                          className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all min-w-[90px] ${
+                            isCheckedIn
+                              ? 'bg-[#F0F2F5] text-[#65676B] hover:bg-[#E4E6EB]'
+                              : 'bg-[#1877F2] text-white hover:bg-[#166FE5]'
+                          } ${isCheckInLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {isCheckInLoading ? (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <svg
+                                className="w-3.5 h-3.5 animate-spin"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                />
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                                />
+                              </svg>
+                            </div>
+                          ) : isCheckedIn ? (
+                            t('participant.checkOut')
+                          ) : (
+                            t('participant.checkIn')
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="text-sm text-[#65676B] mt-1.5">
+                      {participant.email}
+                      {participant.phoneNumber && ` • ${participant.phoneNumber}`}
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      {participant.groupName && (
+                        <span className="px-2 py-0.5 bg-[#E7F3FF] text-[#1877F2] rounded text-xs font-semibold">
+                          {participant.groupName}
+                        </span>
+                      )}
+                      {participant.roomNumber && (
+                        <span className="px-2 py-0.5 bg-[#F0F2F5] text-[#65676B] rounded text-xs font-semibold">
+                          {t('participant.room')} {participant.roomNumber}
+                        </span>
+                      )}
+                      {isCheckedIn && (
+                        <span className="px-2 py-0.5 bg-[#EFFFF6] text-[#31A24C] rounded text-xs font-semibold">
+                          ✓ {t('participant.checkedIn')}
                         </span>
                       )}
                     </div>
-                    <CheckInStatusBadge
-                      status={getCheckInStatusFromParticipant(participant.checkIns)}
-                    />
                   </div>
-                  <div className="text-sm text-[#65676B] mt-1">
-                    {participant.email} {participant.phoneNumber && `| ${participant.phoneNumber}`}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    {participant.ward && (
-                      <span className="text-sm text-[#65676B]">
-                        {participant.ward}
-                        {participant.stake && `, ${participant.stake}`}
-                      </span>
-                    )}
-                    {participant.groupName && (
-                      <span className="px-2 py-0.5 bg-[#E7F3FF] text-[#1877F2] rounded text-xs font-semibold">
-                        {participant.groupName}
-                      </span>
-                    )}
-                    {participant.roomNumber && (
-                      <span className="px-2 py-0.5 bg-[#F0F2F5] text-[#65676B] rounded text-xs font-semibold">
-                        {t('participant.room')} {participant.roomNumber}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))
+                )
+              })
             ) : (
               <div className="px-5 py-4">
                 <div className="text-[#65676B] text-center">{t('home.noResults')}</div>
