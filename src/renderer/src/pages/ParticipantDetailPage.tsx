@@ -16,7 +16,7 @@ import type { Group, Room, CheckInRecord } from '../types'
 import { addToastAtom } from '../stores/toastStore'
 import { userNameAtom } from '../stores/userStore'
 import { writeAuditLog } from '../services/auditLog'
-import { DetailPageSkeleton } from '../components'
+import { DetailPageSkeleton, ParticipantQRCode } from '../components'
 import { ConfirmDialog } from '../components/ui'
 
 interface EditFormData {
@@ -851,6 +851,43 @@ function ParticipantDetailPage(): React.ReactElement {
               </div>
             </div>
           )}
+        </div>
+
+        {/* QR Code Section */}
+        <div className="mb-6">
+          <h2 className="text-lg font-bold text-[#050505] mb-4 pb-2 border-b border-[#DADDE1]">
+            {t('qr.participantQR')}
+          </h2>
+          <div className="bg-[#F7F8FA] rounded-lg p-6">
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              <ParticipantQRCode participant={participant} size={140} />
+              <div className="text-center sm:text-left">
+                <p className="text-sm text-[#65676B] mb-2">
+                  {t('qr.qrDescription')}
+                </p>
+                <ul className="text-sm text-[#65676B] space-y-1">
+                  <li className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-[#1877F2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {t('qr.feature1')}
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-[#1877F2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {t('qr.feature2')}
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-[#1877F2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {t('qr.feature3')}
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="mb-6">

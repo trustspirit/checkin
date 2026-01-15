@@ -422,5 +422,33 @@
     "removeParticipantFailed": "Failed to remove participant",
     "moveParticipantFailed": "Failed to move participant",
     "updateGroupFailed": "Failed to update group"
+  },
+  "qr": {
+    "scanTitle": "Scan QR Code",
+    "scanSubtitle": "Scan a participant's QR code to check in",
+    "scanButton": "Check-in with QR Code",
+    "scanHint": "Position the QR code within the scan area",
+    "scanInstructions": "Show the QR code to the camera",
+    "scanSuccess": "Scan Complete!",
+    "scanAgain": "Scan Again",
+    "scanError": "Error scanning QR code",
+    "invalidQR": "Invalid QR code",
+    "invalidQRCode": "Invalid QR code format",
+    "participantNotFound": "Participant not found",
+    "cameraError": "Cannot access camera",
+    "cameraAccessDenied": "Camera access permission required",
+    "retryCamera": "Restart Camera",
+    "retry": "Retry",
+    "viewDetail": "View Details",
+    "viewDetails": "View Details",
+    "or": "or",
+    "participantQR": "Participant QR Code",
+    "qrDescription": "Use this QR code for quick check-in/check-out.",
+    "feature1": "Quick check-in from mobile devices",
+    "feature2": "Download and print",
+    "feature3": "Use on participant badges",
+    "download": "Download",
+    "print": "Print",
+    "printTitle": "QR Badge"
   }
 }

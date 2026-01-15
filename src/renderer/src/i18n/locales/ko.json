@@ -422,5 +422,33 @@
     "removeParticipantFailed": "참가자 제거에 실패했습니다",
     "moveParticipantFailed": "참가자 이동에 실패했습니다",
     "updateGroupFailed": "그룹 업데이트에 실패했습니다"
+  },
+  "qr": {
+    "scanTitle": "QR 코드 스캔",
+    "scanSubtitle": "참가자 QR 코드를 스캔하여 체크인하세요",
+    "scanButton": "QR 코드로 체크인",
+    "scanHint": "QR 코드를 스캔 영역 안에 위치시키세요",
+    "scanInstructions": "카메라에 QR 코드를 보여주세요",
+    "scanSuccess": "스캔 완료!",
+    "scanAgain": "다시 스캔",
+    "scanError": "QR 코드 스캔 중 오류가 발생했습니다",
+    "invalidQR": "유효하지 않은 QR 코드입니다",
+    "invalidQRCode": "유효하지 않은 QR 코드 형식입니다",
+    "participantNotFound": "참가자를 찾을 수 없습니다",
+    "cameraError": "카메라에 접근할 수 없습니다",
+    "cameraAccessDenied": "카메라 접근 권한이 필요합니다",
+    "retryCamera": "카메라 다시 시작",
+    "retry": "다시 시도",
+    "viewDetail": "상세 정보 보기",
+    "viewDetails": "상세 정보 보기",
+    "or": "또는",
+    "participantQR": "참가자 QR 코드",
+    "qrDescription": "이 QR 코드를 사용하여 빠르게 체크인/체크아웃할 수 있습니다.",
+    "feature1": "모바일 기기에서 빠른 체크인",
+    "feature2": "다운로드 후 인쇄 가능",
+    "feature3": "참가자 명찰에 사용",
+    "download": "다운로드",
+    "print": "인쇄",
+    "printTitle": "QR 명찰"
   }
 }

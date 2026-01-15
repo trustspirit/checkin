@@ -13,7 +13,11 @@ import { userNameAtom } from '../stores/userStore'
 import { addToastAtom } from '../stores/toastStore'
 import type { Participant } from '../types'
 import { CheckInStatus } from '../types'
-import { SearchResultsSkeleton, getCheckInStatusFromParticipant } from '../components'
+import {
+  SearchResultsSkeleton,
+  getCheckInStatusFromParticipant,
+  QRScannerModal
+} from '../components'
 
 function HomePage(): React.ReactElement {
   const { t } = useTranslation()
@@ -23,6 +27,7 @@ function HomePage(): React.ReactElement {
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const [showResults, setShowResults] = useState(false)
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false)
   const navigate = useNavigate()
   const searchInputRef = useRef<HTMLInputElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
@@ -383,6 +388,35 @@ function HomePage(): React.ReactElement {
           </div>
         )}
       </div>
+
+      {/* QR 스캔 버튼 */}
+      <div className="flex items-center justify-center mt-6">
+        <div className="flex items-center gap-3 text-[#65676B]">
+          <div className="h-px w-16 bg-[#DADDE1]" />
+          <span className="text-sm">{t('qr.or')}</span>
+          <div className="h-px w-16 bg-[#DADDE1]" />
+        </div>
+      </div>
+
+      <div className="flex justify-center mt-4">
+        <button
+          onClick={() => setIsQRScannerOpen(true)}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-[#DADDE1] rounded-full text-[#050505] font-medium hover:bg-[#F0F2F5] hover:border-[#1877F2] transition-all shadow-sm"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+            />
+          </svg>
+          {t('qr.scanButton')}
+        </button>
+      </div>
+
+      {/* QR Scanner Modal */}
+      <QRScannerModal isOpen={isQRScannerOpen} onClose={() => setIsQRScannerOpen(false)} />
     </div>
   )
 }
