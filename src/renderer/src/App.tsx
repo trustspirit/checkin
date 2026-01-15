@@ -13,6 +13,8 @@ import RoomsPage from './pages/RoomsPage'
 import RoomDetailPage from './pages/RoomDetailPage'
 import GroupDetailPage from './pages/GroupDetailPage'
 import StatisticsPage from './pages/StatisticsPage'
+import BusesPage from './pages/BusesPage'
+import BusDetailPage from './pages/BusDetailPage'
 import AddParticipantModal from './components/AddParticipantModal'
 import ToastContainer from './components/ToastContainer'
 import UserNameModal from './components/UserNameModal'
@@ -146,6 +148,18 @@ function App(): React.ReactElement {
             >
               {t('nav.statistics')}
             </NavLink>
+            <NavLink
+              to="/buses"
+              className={({ isActive }) =>
+                `relative px-4 flex items-center font-medium text-[15px] transition-colors duration-200 ${
+                  isActive
+                    ? 'text-[#1877F2]'
+                    : 'text-[#65676B] hover:bg-[#F2F2F2] rounded-lg mx-0.5'
+                } ${isActive ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[#1877F2] after:rounded-t-sm' : ''}`
+              }
+            >
+              {t('nav.buses')}
+            </NavLink>
             <div className="relative" ref={manageMenuRef}>
               <button
                 onClick={() => setIsManageMenuOpen(!isManageMenuOpen)}
@@ -242,6 +256,8 @@ function App(): React.ReactElement {
           <Route path="/groups/:id" element={<GroupDetailPage />} />
           <Route path="/rooms" element={<RoomsPage />} />
           <Route path="/rooms/:id" element={<RoomDetailPage />} />
+          <Route path="/buses" element={<BusesPage />} />
+          <Route path="/buses/:id" element={<BusDetailPage />} />
           <Route path="/import" element={<ImportPage />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
           <Route path="/statistics" element={<StatisticsPage />} />

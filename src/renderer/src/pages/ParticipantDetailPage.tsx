@@ -17,7 +17,8 @@ import { addToastAtom } from '../stores/toastStore'
 import { userNameAtom } from '../stores/userStore'
 import { writeAuditLog } from '../services/auditLog'
 import { DetailPageSkeleton, ParticipantQRCode } from '../components'
-import { ConfirmDialog } from '../components/ui'
+import { ConfirmDialog, PhoneInput, LeaderBadge } from '../components/ui'
+import { formatPhoneNumber } from '../utils/phoneFormat'
 
 interface EditFormData {
   name: string
@@ -302,7 +303,7 @@ function ParticipantDetailPage(): React.ReactElement {
     setEditForm({
       name: participant.name,
       email: participant.email,
-      phoneNumber: participant.phoneNumber || '',
+      phoneNumber: formatPhoneNumber(participant.phoneNumber || ''),
       gender: participant.gender || '',
       age: participant.age?.toString() || '',
       ward: participant.ward || '',
@@ -579,10 +580,9 @@ function ParticipantDetailPage(): React.ReactElement {
                 <label className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold block">
                   {t('common.phone')}
                 </label>
-                <input
-                  type="tel"
+                <PhoneInput
                   value={editForm.phoneNumber}
-                  onChange={(e) => setEditForm({ ...editForm, phoneNumber: e.target.value })}
+                  onChange={(value) => setEditForm({ ...editForm, phoneNumber: value })}
                   className="w-full px-3 py-2 border border-[#DADDE1] rounded-md text-sm outline-none focus:ring-2 focus:ring-[#1877F2] focus:border-transparent"
                 />
               </div>
@@ -682,7 +682,9 @@ function ParticipantDetailPage(): React.ReactElement {
                 <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
                   {t('common.phone')}
                 </div>
-                <div className="font-semibold text-[#050505]">{participant.phoneNumber || '-'}</div>
+                <div className="font-semibold text-[#050505]">
+                  {participant.phoneNumber ? formatPhoneNumber(participant.phoneNumber) : '-'}
+                </div>
               </div>
               <div className="bg-[#F0F2F5] rounded-md p-3 border border-transparent">
                 <div className="text-xs uppercase tracking-wide text-[#65676B] mb-1 font-semibold">
@@ -862,25 +864,53 @@ function ParticipantDetailPage(): React.ReactElement {
             <div className="flex flex-col sm:flex-row items-center gap-6">
               <ParticipantQRCode participant={participant} size={140} />
               <div className="text-center sm:text-left">
-                <p className="text-sm text-[#65676B] mb-2">
-                  {t('qr.qrDescription')}
-                </p>
+                <p className="text-sm text-[#65676B] mb-2">{t('qr.qrDescription')}</p>
                 <ul className="text-sm text-[#65676B] space-y-1">
                   <li className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-[#1877F2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <svg
+                      className="w-4 h-4 text-[#1877F2]"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                     {t('qr.feature1')}
                   </li>
                   <li className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-[#1877F2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <svg
+                      className="w-4 h-4 text-[#1877F2]"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                     {t('qr.feature2')}
                   </li>
                   <li className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-[#1877F2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <svg
+                      className="w-4 h-4 text-[#1877F2]"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                     {t('qr.feature3')}
                   </li>
@@ -902,12 +932,16 @@ function ParticipantDetailPage(): React.ReactElement {
               </div>
               <div className="flex items-center gap-3">
                 {participant.groupName && participant.groupId ? (
-                  <Link
-                    to={`/groups/${participant.groupId}`}
-                    className="px-4 py-2 bg-[#E7F3FF] text-[#1877F2] rounded-md font-bold shadow-sm hover:bg-[#D4E8FF] transition-colors"
-                  >
-                    {participant.groupName}
-                  </Link>
+                  <>
+                    <Link
+                      to={`/groups/${participant.groupId}`}
+                      className="px-4 py-2 bg-[#E7F3FF] text-[#1877F2] rounded-md font-bold shadow-sm hover:bg-[#D4E8FF] transition-colors"
+                    >
+                      {participant.groupName}
+                    </Link>
+                    {groups.find((g) => g.id === participant.groupId)?.leaderId ===
+                      participant.id && <LeaderBadge type="group" size="md" />}
+                  </>
                 ) : (
                   <span className="px-4 py-2 bg-[#F0F2F5] text-[#65676B] rounded-md font-medium">
                     {t('common.notAssigned')}
@@ -971,12 +1005,16 @@ function ParticipantDetailPage(): React.ReactElement {
               </div>
               <div className="flex items-center gap-3">
                 {participant.roomNumber && participant.roomId ? (
-                  <Link
-                    to={`/rooms/${participant.roomId}`}
-                    className="px-4 py-2 bg-[#F0F2F5] text-[#050505] rounded-md font-bold shadow-sm hover:bg-[#E4E6EB] transition-colors"
-                  >
-                    {t('participant.room')} {participant.roomNumber}
-                  </Link>
+                  <>
+                    <Link
+                      to={`/rooms/${participant.roomId}`}
+                      className="px-4 py-2 bg-[#F0F2F5] text-[#050505] rounded-md font-bold shadow-sm hover:bg-[#E4E6EB] transition-colors"
+                    >
+                      {t('participant.room')} {participant.roomNumber}
+                    </Link>
+                    {rooms.find((r) => r.id === participant.roomId)?.leaderId ===
+                      participant.id && <LeaderBadge type="room" size="md" />}
+                  </>
                 ) : (
                   <span className="px-4 py-2 bg-[#F0F2F5] text-[#65676B] rounded-md font-medium">
                     {t('common.notAssigned')}

@@ -7,6 +7,7 @@ import { CheckInFilterButtons, CheckInStatusBadge, getCheckInStatusFromParticipa
 import { ExportMenu } from './ExportMenu'
 import { useParticipantsTabLogic } from '../../hooks'
 import { participantsAtom, groupsAtom, roomsAtom } from '../../stores/dataStore'
+import { formatPhoneNumber } from '../../utils/phoneFormat'
 
 interface SortableHeaderProps {
   field: SortField
@@ -215,7 +216,7 @@ export function ParticipantsTab() {
               >
                 <td className="px-4 py-3 font-semibold text-[#050505]">{participant.name}</td>
                 <td className="px-4 py-3 text-[#65676B]">{participant.email}</td>
-                <td className="px-4 py-3 text-[#65676B]">{participant.phoneNumber || '-'}</td>
+                <td className="px-4 py-3 text-[#65676B]">{participant.phoneNumber ? formatPhoneNumber(participant.phoneNumber) : '-'}</td>
                 <td className="px-4 py-3 text-[#65676B]">{participant.ward || '-'}</td>
                 <td className="px-4 py-3">
                   {participant.groupName ? (

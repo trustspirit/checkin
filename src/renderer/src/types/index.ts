@@ -25,6 +25,8 @@ export interface Participant {
   groupName?: string
   roomId?: string
   roomNumber?: string
+  busId?: string
+  busName?: string
   checkIns: CheckInRecord[]
   createdAt: Date
   updatedAt: Date
@@ -44,6 +46,8 @@ export interface Group {
   participantCount: number
   expectedCapacity?: number
   tags?: string[]
+  leaderId?: string
+  leaderName?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -58,6 +62,8 @@ export interface Room {
   currentOccupancy: number
   genderType?: RoomGenderType
   roomType?: RoomType
+  leaderId?: string
+  leaderName?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -80,8 +86,24 @@ export interface AuditLogEntry {
   timestamp: string
   userName: string
   action: 'create' | 'update' | 'delete' | 'check_in' | 'check_out' | 'assign' | 'import'
-  targetType: 'participant' | 'group' | 'room'
+  targetType: 'participant' | 'group' | 'room' | 'bus'
   targetId: string
   targetName: string
   changes?: Record<string, { from: unknown; to: unknown }>
+}
+
+// Bus/Region for transportation management
+export interface BusRoute {
+  id: string
+  name: string // e.g., "서울 1호차", "부산 버스"
+  region: string // e.g., "서울", "부산", "대구"
+  departureLocation?: string // 출발 장소
+  estimatedArrivalTime?: string // 예정 도착 시간 (e.g., "14:00")
+  contactName?: string // 인솔자 이름
+  contactPhone?: string // 인솔자 연락처
+  notes?: string // 메모
+  participantCount: number
+  arrivedAt?: Date // 도착 시간 (도착 표시된 경우)
+  createdAt: Date
+  updatedAt: Date
 }

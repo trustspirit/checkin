@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Group, Room } from '../types'
+import type { Group, Room, BusRoute } from '../types'
 
 interface MoveToRoomModalProps {
   type: 'room'
@@ -24,23 +24,40 @@ interface MoveToGroupModalProps {
   onClose: () => void
 }
 
-type MoveToModalProps = MoveToRoomModalProps | MoveToGroupModalProps
+interface MoveToBusModalProps {
+  type: 'bus'
+  selectedCount: number
+  items: BusRoute[]
+  currentId: string | null
+  isMoving: boolean
+  error: string | null
+  onMove: (item: BusRoute) => void
+  onClose: () => void
+}
+
+type MoveToModalProps = MoveToRoomModalProps | MoveToGroupModalProps | MoveToBusModalProps
 
 function MoveToModal(props: MoveToModalProps): React.ReactElement {
   const { t } = useTranslation()
   const { type, selectedCount, items, currentId, isMoving, error, onClose } = props
 
-  const title =
-    type === 'room'
-      ? t('participant.moveToAnotherRoom', { count: selectedCount })
-      : t('participant.moveToAnotherGroup', { count: selectedCount })
+  const getTitle = () => {
+    switch (type) {
+      case 'room':
+        return t('participant.moveToAnotherRoom', { count: selectedCount })
+      case 'group':
+        return t('participant.moveToAnotherGroup', { count: selectedCount })
+      case 'bus':
+        return t('bus.moveToBus', { count: selectedCount })
+    }
+  }
 
   const filteredItems = items.filter((item) => item.id !== currentId)
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6 border border-[#DADDE1]">
-        <h3 className="text-xl font-bold text-[#050505] mb-4">{title}</h3>
+        <h3 className="text-xl font-bold text-[#050505] mb-4">{getTitle()}</h3>
 
         {error && (
           <div className="mb-4 p-3 bg-[#FFEBEE] border border-[#FFCDD2] text-[#FA383E] rounded-md text-sm">
@@ -92,6 +109,30 @@ function MoveToModal(props: MoveToModalProps): React.ReactElement {
                 </div>
               </button>
             ))}
+
+          {type === 'bus' &&
+            (filteredItems as BusRoute[]).map((bus) => (
+              <button
+                key={bus.id}
+                onClick={() => (props as MoveToBusModalProps).onMove(bus)}
+                disabled={isMoving}
+                className="w-full p-3 rounded-lg border border-[#DADDE1] text-left hover:bg-[#F0F2F5] transition-all"
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="font-semibold text-[#050505]">{bus.name}</span>
+                    <span className="text-sm text-[#65676B] ml-2">({bus.region})</span>
+                  </div>
+                  <span className="text-sm text-[#65676B]">
+                    {bus.participantCount} {t('bus.people')}
+                  </span>
+                </div>
+              </button>
+            ))}
+
+          {filteredItems.length === 0 && (
+            <div className="text-center py-8 text-[#65676B]">{t('bus.noOtherBuses')}</div>
+          )}
         </div>
 
         <div className="mt-6 flex justify-end gap-3">

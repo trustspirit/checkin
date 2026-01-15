@@ -148,6 +148,8 @@ export interface UpdateGroupData {
   name?: string
   expectedCapacity?: number | null
   tags?: string[] | null
+  leaderId?: string | null
+  leaderName?: string | null
 }
 
 export const updateGroup = async (groupId: string, data: UpdateGroupData): Promise<Group> => {
@@ -173,6 +175,10 @@ export const updateGroup = async (groupId: string, data: UpdateGroupData): Promi
 
   if (data.tags !== undefined) {
     updateData.tags = data.tags
+  }
+  if (data.leaderId !== undefined) {
+    updateData.leaderId = data.leaderId
+    updateData.leaderName = data.leaderName
   }
 
   batch.update(groupRef, updateData)

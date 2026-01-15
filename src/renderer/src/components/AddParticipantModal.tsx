@@ -11,6 +11,7 @@ import {
 import type { Group, Room } from '../types'
 import { userNameAtom } from '../stores/userStore'
 import { writeAuditLog } from '../services/auditLog'
+import { PhoneInput } from './ui'
 
 interface AddParticipantModalProps {
   isOpen: boolean
@@ -209,10 +210,9 @@ function AddParticipantModal({
               <label className="block text-sm font-medium text-[#050505] mb-1">
                 {t('common.phone')}
               </label>
-              <input
-                type="tel"
+              <PhoneInput
                 value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                onChange={setPhoneNumber}
                 className="w-full px-4 py-2 bg-[#F0F2F5] rounded-lg outline-none focus:ring-2 focus:ring-[#1877F2] placeholder-[#65676B]"
                 placeholder={t('common.phone')}
               />

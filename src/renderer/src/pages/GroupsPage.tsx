@@ -9,7 +9,8 @@ import {
   createOrGetGroup,
   deleteGroup,
   getGroupsPaginated,
-  subscribeToGroups
+  subscribeToGroups,
+  updateGroup
 } from '../services/firebase'
 import { writeAuditLog } from '../services/auditLog'
 import { useGroupFilter, useBatchedInfiniteScrollWithRealtime } from '../hooks'
@@ -17,13 +18,15 @@ import type { Group } from '../types'
 import { ViewMode, CapacityStatus } from '../types'
 import {
   ViewModeToggle,
-  Tooltip,
   StatusDot,
   getCapacityStatus,
   ImportCSVPanel,
   GroupFilterBar,
-  AddGroupForm
+  AddGroupForm,
+  PrintableGroupRoster,
+  GroupHoverContent
 } from '../components'
+import { HoverCard, LeaderBadge } from '../components/ui'
 
 function GroupsPage(): React.ReactElement {
   const { t } = useTranslation()
@@ -62,7 +65,6 @@ function GroupsPage(): React.ReactElement {
   const [isImporting, setIsImporting] = useState(false)
   const [csvInput, setCsvInput] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.List)
-  const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null)
 
   // Intersection Observer for infinite scroll
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
@@ -218,6 +220,43 @@ function GroupsPage(): React.ReactElement {
     return participants.filter((p) => p.groupId === groupId)
   }
 
+  const handleSetGroupLeader = async (
+    group: Group,
+    participantId: string | null,
+    participantName: string | null
+  ) => {
+    try {
+      await updateGroup(group.id, {
+        leaderId: participantId,
+        leaderName: participantName
+      })
+      await writeAuditLog(userName || 'Unknown', 'update', 'group', group.id, group.name, {
+        leader: { from: group.leaderName || null, to: participantName }
+      })
+      addToast({
+        type: 'success',
+        message: participantId ? t('group.leaderSet') : t('group.leaderRemoved')
+      })
+      refresh()
+      sync()
+    } catch (error) {
+      console.error('Failed to set group leader:', error)
+      addToast({ type: 'error', message: t('toast.updateFailed') })
+    }
+  }
+
+  const renderGroupHoverContent = (group: Group) => {
+    const groupParticipants = getGroupParticipants(group.id)
+    return (
+      <GroupHoverContent
+        group={group}
+        participants={groupParticipants}
+        onSetLeader={handleSetGroupLeader}
+        formatCapacity={formatCapacity}
+      />
+    )
+  }
+
   const getStatusLabel = (status: CapacityStatus): string => {
     switch (status) {
       case CapacityStatus.Full:
@@ -250,6 +289,7 @@ function GroupsPage(): React.ReactElement {
         </div>
         <div className="flex gap-2">
           <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+          <PrintableGroupRoster groups={paginatedGroups} participants={participants} />
           <button
             onClick={() => setIsImporting(!isImporting)}
             className="px-4 py-2 border border-[#DADDE1] text-[#65676B] rounded-lg text-sm font-semibold hover:bg-[#F0F2F5] transition-colors"
@@ -360,58 +400,53 @@ function GroupsPage(): React.ReactElement {
             </thead>
             <tbody>
               {filteredAndSortedGroups.map((group) => {
-                const groupParticipants = getGroupParticipants(group.id)
                 const status = getCapacityStatus(group.participantCount, group.expectedCapacity)
                 return (
-                  <tr
-                    key={group.id}
-                    className="border-b border-[#DADDE1] last:border-b-0 hover:bg-[#F7F8FA] cursor-pointer relative"
-                    onClick={() => navigate(`/groups/${group.id}`)}
-                    onMouseEnter={() => setHoveredGroupId(group.id)}
-                    onMouseLeave={() => setHoveredGroupId(null)}
-                  >
-                    <td className="px-4 py-3 font-medium text-[#050505] relative">
-                      {group.name}
-                      {hoveredGroupId === group.id && groupParticipants.length > 0 && (
-                        <Tooltip
-                          title={t('common.membersTitle')}
-                          items={groupParticipants.map((p) => ({ id: p.id, name: p.name }))}
-                        />
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1 flex-wrap">
-                        {group.tags?.map((tag) => (
-                          <span
-                            key={tag}
-                            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getTagColor(tag)}`}
-                          >
-                            {getTagLabel(tag)}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-[#65676B]">
-                      {formatCapacity(group.participantCount, group.expectedCapacity)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <StatusDot status={status} />
-                        <span className="text-sm text-[#65676B]">{getStatusLabel(status)}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteGroup(group)
-                        }}
-                        className="text-[#FA383E] hover:underline text-sm font-semibold"
-                      >
-                        {t('common.delete')}
-                      </button>
-                    </td>
-                  </tr>
+                  <HoverCard key={group.id} content={renderGroupHoverContent(group)}>
+                    <tr
+                      className="border-b border-[#DADDE1] last:border-b-0 hover:bg-[#F7F8FA] cursor-pointer relative"
+                      onClick={() => navigate(`/groups/${group.id}`)}
+                    >
+                      <td className="px-4 py-3 font-medium text-[#050505]">
+                        <div className="flex items-center gap-2">
+                          {group.name}
+                          {group.leaderId && <span className="text-purple-500">⭐</span>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1 flex-wrap">
+                          {group.tags?.map((tag) => (
+                            <span
+                              key={tag}
+                              className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getTagColor(tag)}`}
+                            >
+                              {getTagLabel(tag)}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-[#65676B]">
+                        {formatCapacity(group.participantCount, group.expectedCapacity)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <StatusDot status={status} />
+                          <span className="text-sm text-[#65676B]">{getStatusLabel(status)}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteGroup(group)
+                          }}
+                          className="text-[#FA383E] hover:underline text-sm font-semibold"
+                        >
+                          {t('common.delete')}
+                        </button>
+                      </td>
+                    </tr>
+                  </HoverCard>
                 )
               })}
             </tbody>
@@ -434,65 +469,65 @@ function GroupsPage(): React.ReactElement {
         /* Card View */
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredAndSortedGroups.map((group) => {
-            const groupParticipants = getGroupParticipants(group.id)
             const status = getCapacityStatus(group.participantCount, group.expectedCapacity)
             return (
-              <div
-                key={group.id}
-                className="relative bg-white rounded-lg border border-[#DADDE1] p-4 hover:shadow-md hover:border-[#1877F2] transition-all cursor-pointer"
-                onClick={() => navigate(`/groups/${group.id}`)}
-                onMouseEnter={() => setHoveredGroupId(group.id)}
-                onMouseLeave={() => setHoveredGroupId(null)}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="font-bold text-[#050505] text-lg">{group.name}</h3>
-                    <p className="text-sm text-[#65676B]">
-                      {formatCapacity(group.participantCount, group.expectedCapacity)}{' '}
-                      {t('common.members')}
-                    </p>
+              <HoverCard key={group.id} content={renderGroupHoverContent(group)}>
+                <div
+                  className="relative bg-white rounded-lg border border-[#DADDE1] p-4 hover:shadow-md hover:border-[#1877F2] transition-all cursor-pointer"
+                  onClick={() => navigate(`/groups/${group.id}`)}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-[#050505] text-lg">{group.name}</h3>
+                        {group.leaderId && <span className="text-purple-500">⭐</span>}
+                      </div>
+                      <p className="text-sm text-[#65676B]">
+                        {formatCapacity(group.participantCount, group.expectedCapacity)}{' '}
+                        {t('common.members')}
+                      </p>
+                    </div>
+                    <StatusDot status={status} size="md" />
                   </div>
-                  <StatusDot status={status} size="md" />
-                </div>
 
-                {group.tags && group.tags.length > 0 && (
-                  <div className="flex gap-1 mb-2 flex-wrap">
-                    {group.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTagColor(tag)}`}
-                      >
-                        {getTagLabel(tag)}
-                      </span>
-                    ))}
+                  {group.leaderName && (
+                    <div className="flex items-center gap-1 mb-2 text-sm text-purple-700 bg-purple-50 px-2 py-1 rounded">
+                      <span>⭐</span>
+                      <span className="font-medium">{group.leaderName}</span>
+                    </div>
+                  )}
+
+                  {group.tags && group.tags.length > 0 && (
+                    <div className="flex gap-1 mb-2 flex-wrap">
+                      {group.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTagColor(tag)}`}
+                        >
+                          {getTagLabel(tag)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center">
+                    <span className="px-2 py-1 rounded text-xs font-semibold bg-[#F0F2F5] text-[#65676B]">
+                      {group.expectedCapacity
+                        ? `${group.participantCount} / ${group.expectedCapacity}`
+                        : `${group.participantCount} ${t('common.members')}`}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteGroup(group)
+                      }}
+                      className="text-[#FA383E] hover:underline text-xs font-semibold"
+                    >
+                      {t('common.delete')}
+                    </button>
                   </div>
-                )}
-
-                <div className="flex justify-between items-center">
-                  <span className="px-2 py-1 rounded text-xs font-semibold bg-[#F0F2F5] text-[#65676B]">
-                    {group.expectedCapacity
-                      ? `${group.participantCount} / ${group.expectedCapacity}`
-                      : `${group.participantCount} ${t('common.members')}`}
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeleteGroup(group)
-                    }}
-                    className="text-[#FA383E] hover:underline text-xs font-semibold"
-                  >
-                    {t('common.delete')}
-                  </button>
                 </div>
-
-                {hoveredGroupId === group.id && groupParticipants.length > 0 && (
-                  <Tooltip
-                    title={t('common.membersTitle')}
-                    items={groupParticipants.map((p) => ({ id: p.id, name: p.name }))}
-                    position="top"
-                  />
-                )}
-              </div>
+              </HoverCard>
             )
           })}
 

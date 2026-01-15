@@ -13,6 +13,7 @@ import { userNameAtom } from '../stores/userStore'
 import { writeAuditLog } from '../services/auditLog'
 import type { Group } from '../types'
 import { DetailPageSkeleton } from '../components'
+import { LeaderBadge, ConfirmDialog } from '../components/ui'
 
 function GroupDetailPage(): React.ReactElement {
   const { t } = useTranslation()
@@ -35,6 +36,12 @@ function GroupDetailPage(): React.ReactElement {
   const [customTagInput, setCustomTagInput] = useState('')
 
   const [movingParticipantId, setMovingParticipantId] = useState<string | null>(null)
+  const [leaderConfirm, setLeaderConfirm] = useState<{
+    open: boolean
+    participantId: string
+    participantName: string
+    isRemoving: boolean
+  }>({ open: false, participantId: '', participantName: '', isRemoving: false })
 
   const presetTags = ['male', 'female']
 
@@ -158,6 +165,43 @@ function GroupDetailPage(): React.ReactElement {
         type: 'error',
         message: error instanceof Error ? error.message : t('toast.moveParticipantFailed')
       })
+    }
+  }
+
+  const handleSetLeader = async () => {
+    if (!group || !id) return
+
+    try {
+      const { participantId, participantName, isRemoving } = leaderConfirm
+
+      await updateGroup(id, {
+        leaderId: isRemoving ? null : participantId,
+        leaderName: isRemoving ? null : participantName
+      })
+
+      await writeAuditLog(
+        userName || 'Unknown',
+        'update',
+        'group',
+        id,
+        group.name,
+        {
+          leader: {
+            from: group.leaderName || null,
+            to: isRemoving ? null : participantName
+          }
+        }
+      )
+
+      await sync()
+      setLeaderConfirm({ open: false, participantId: '', participantName: '', isRemoving: false })
+      addToast({
+        type: 'success',
+        message: isRemoving ? t('group.leaderRemoved') : t('group.leaderSet')
+      })
+    } catch (error) {
+      console.error('Set leader error:', error)
+      addToast({ type: 'error', message: t('toast.updateGroupFailed') })
     }
   }
 
@@ -404,43 +448,52 @@ function GroupDetailPage(): React.ReactElement {
 
           {groupParticipants.length > 0 ? (
             <div className="space-y-3">
-              {groupParticipants.map((participant) => (
-                <div
-                  key={participant.id}
-                  className="flex items-center justify-between p-4 bg-[#F0F2F5] rounded-lg border border-transparent hover:border-[#DADDE1] transition-colors group"
-                >
-                  <div>
-                    <Link
-                      to={`/participant/${participant.id}`}
-                      className="text-lg font-semibold text-[#050505] hover:text-[#1877F2] hover:underline block"
-                    >
-                      {participant.name}
-                    </Link>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {participant.roomId && (
+              {groupParticipants.map((participant) => {
+                const isLeader = group.leaderId === participant.id
+                return (
+                  <div
+                    key={participant.id}
+                    className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
+                      isLeader
+                        ? 'bg-purple-50 border-purple-200 hover:border-purple-300'
+                        : 'bg-[#F0F2F5] border-transparent hover:border-[#DADDE1]'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
                         <Link
-                          to={`/rooms/${participant.roomId}`}
-                          className="text-sm text-[#1877F2] hover:underline"
+                          to={`/participant/${participant.id}`}
+                          className="text-lg font-semibold text-[#050505] hover:text-[#1877F2] hover:underline"
                         >
-                          {t('participant.room')}{' '}
-                          {rooms.find((r) => r.id === participant.roomId)?.roomNumber ||
-                            participant.roomNumber}
+                          {participant.name}
                         </Link>
-                      )}
-                      {participant.roomId && (participant.ward || participant.stake) && (
-                        <span className="text-[#DADDE1]">•</span>
-                      )}
-                      {(participant.ward || participant.stake) && (
-                        <span className="text-sm text-[#65676B]">
-                          {participant.ward}
-                          {participant.ward && participant.stake ? ', ' : ''}
-                          {participant.stake}
-                        </span>
-                      )}
+                        {isLeader && <LeaderBadge type="group" size="sm" />}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {participant.roomId && (
+                          <Link
+                            to={`/rooms/${participant.roomId}`}
+                            className="text-sm text-[#1877F2] hover:underline"
+                          >
+                            {t('participant.room')}{' '}
+                            {rooms.find((r) => r.id === participant.roomId)?.roomNumber ||
+                              participant.roomNumber}
+                          </Link>
+                        )}
+                        {participant.roomId && (participant.ward || participant.stake) && (
+                          <span className="text-[#DADDE1]">•</span>
+                        )}
+                        {(participant.ward || participant.stake) && (
+                          <span className="text-sm text-[#65676B]">
+                            {participant.ward}
+                            {participant.ward && participant.stake ? ', ' : ''}
+                            {participant.stake}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                     <div className="relative">
                       <button
                         onClick={() =>
@@ -489,15 +542,34 @@ function GroupDetailPage(): React.ReactElement {
                       )}
                     </div>
 
-                    <button
-                      onClick={() => handleRemoveParticipant(participant.id, participant.name)}
-                      className="px-3 py-1.5 bg-white border border-[#DADDE1] text-[#FA383E] text-sm font-semibold rounded hover:bg-[#FFF5F5] transition-colors"
-                    >
-                      {t('common.remove')}
-                    </button>
+                      <button
+                        onClick={() =>
+                          setLeaderConfirm({
+                            open: true,
+                            participantId: participant.id,
+                            participantName: participant.name,
+                            isRemoving: isLeader
+                          })
+                        }
+                        className={`px-3 py-1.5 bg-white border text-sm font-semibold rounded transition-colors ${
+                          isLeader
+                            ? 'border-purple-300 text-purple-700 hover:bg-purple-50'
+                            : 'border-[#DADDE1] text-purple-600 hover:bg-purple-50'
+                        }`}
+                      >
+                        {isLeader ? t('group.removeLeader') : t('group.setLeader')}
+                      </button>
+
+                      <button
+                        onClick={() => handleRemoveParticipant(participant.id, participant.name)}
+                        className="px-3 py-1.5 bg-white border border-[#DADDE1] text-[#FA383E] text-sm font-semibold rounded hover:bg-[#FFF5F5] transition-colors"
+                      >
+                        {t('common.remove')}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <div className="text-center py-12 bg-[#F0F2F5] rounded-lg border-2 border-dashed border-[#DADDE1]">
@@ -513,6 +585,22 @@ function GroupDetailPage(): React.ReactElement {
           onClick={() => setMovingParticipantId(null)}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={leaderConfirm.open}
+        onClose={() =>
+          setLeaderConfirm({ open: false, participantId: '', participantName: '', isRemoving: false })
+        }
+        onConfirm={handleSetLeader}
+        title={leaderConfirm.isRemoving ? t('group.removeLeader') : t('group.setLeader')}
+        message={
+          leaderConfirm.isRemoving
+            ? t('group.confirmRemoveLeader')
+            : t('group.confirmSetLeader', { name: leaderConfirm.participantName })
+        }
+        confirmText={t('common.confirm')}
+        variant={leaderConfirm.isRemoving ? 'danger' : 'primary'}
+      />
     </div>
   )
 }

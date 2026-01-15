@@ -164,6 +164,8 @@ export interface UpdateRoomData {
   maxCapacity?: number
   genderType?: RoomGenderType | null
   roomType?: RoomType | null
+  leaderId?: string | null
+  leaderName?: string | null
 }
 
 export const updateRoom = async (roomId: string, data: UpdateRoomData): Promise<Room> => {
@@ -193,6 +195,10 @@ export const updateRoom = async (roomId: string, data: UpdateRoomData): Promise<
   }
   if (data.roomType !== undefined) {
     updateData.roomType = data.roomType
+  }
+  if (data.leaderId !== undefined) {
+    updateData.leaderId = data.leaderId
+    updateData.leaderName = data.leaderName
   }
 
   batch.update(roomRef, updateData)

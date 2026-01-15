@@ -74,3 +74,21 @@ export type { ResetResult } from './dataReset'
 // Users
 export { fetchUsers, saveUser, removeUser, subscribeToUsers } from './users'
 export type { AppUser } from './users'
+
+// Bus Routes
+export {
+  getAllBusRoutes,
+  getBusRoutesByRegion,
+  getBusRouteById,
+  createOrGetBusRoute,
+  updateBusRoute,
+  deleteBusRoute,
+  assignParticipantToBus,
+  removeParticipantFromBus,
+  getAllRegions,
+  moveParticipantsToBus,
+  markBusAsArrived,
+  cancelBusArrival,
+  BUSES_COLLECTION
+} from './buses'
+export type { CreateBusRouteOptions, UpdateBusRouteData } from './buses'

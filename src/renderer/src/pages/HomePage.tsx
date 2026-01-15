@@ -18,6 +18,9 @@ import {
   getCheckInStatusFromParticipant,
   QRScannerModal
 } from '../components'
+import { formatPhoneNumber } from '../utils/phoneFormat'
+import { LeaderBadge } from '../components/ui'
+import { groupsAtom, roomsAtom } from '../stores/dataStore'
 
 function HomePage(): React.ReactElement {
   const { t } = useTranslation()
@@ -33,6 +36,8 @@ function HomePage(): React.ReactElement {
   const resultsRef = useRef<HTMLDivElement>(null)
   const userName = useAtomValue(userNameAtom)
   const addToast = useSetAtom(addToastAtom)
+  const groups = useAtomValue(groupsAtom)
+  const rooms = useAtomValue(roomsAtom)
 
   const performSearch = useCallback(async (term: string) => {
     if (!term.trim()) {
@@ -357,19 +362,28 @@ function HomePage(): React.ReactElement {
 
                     <div className="text-sm text-[#65676B] mt-1.5">
                       {participant.email}
-                      {participant.phoneNumber && ` • ${participant.phoneNumber}`}
+                      {participant.phoneNumber &&
+                        ` • ${formatPhoneNumber(participant.phoneNumber)}`}
                     </div>
 
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      {participant.groupName && (
-                        <span className="px-2 py-0.5 bg-[#E7F3FF] text-[#1877F2] rounded text-xs font-semibold">
-                          {participant.groupName}
-                        </span>
+                      {participant.groupName && participant.groupId && (
+                        <>
+                          <span className="px-2 py-0.5 bg-[#E7F3FF] text-[#1877F2] rounded text-xs font-semibold">
+                            {participant.groupName}
+                          </span>
+                          {groups.find((g) => g.id === participant.groupId)?.leaderId ===
+                            participant.id && <LeaderBadge type="group" size="sm" />}
+                        </>
                       )}
-                      {participant.roomNumber && (
-                        <span className="px-2 py-0.5 bg-[#F0F2F5] text-[#65676B] rounded text-xs font-semibold">
-                          {t('participant.room')} {participant.roomNumber}
-                        </span>
+                      {participant.roomNumber && participant.roomId && (
+                        <>
+                          <span className="px-2 py-0.5 bg-[#F0F2F5] text-[#65676B] rounded text-xs font-semibold">
+                            {t('participant.room')} {participant.roomNumber}
+                          </span>
+                          {rooms.find((r) => r.id === participant.roomId)?.leaderId ===
+                            participant.id && <LeaderBadge type="room" size="sm" />}
+                        </>
                       )}
                       {isCheckedIn && (
                         <span className="px-2 py-0.5 bg-[#EFFFF6] text-[#31A24C] rounded text-xs font-semibold">

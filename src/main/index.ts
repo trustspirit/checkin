@@ -98,6 +98,22 @@ function createWindow(): void {
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
+    // Allow blank windows for printing (window.open('', '_blank'))
+    if (details.url === 'about:blank' || details.url === '') {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 800,
+          height: 600,
+          webPreferences: {
+            sandbox: true,
+            contextIsolation: true,
+            nodeIntegration: false
+          }
+        }
+      }
+    }
+    // Open external URLs in system browser
     shell.openExternal(details.url)
     return { action: 'deny' }
   })

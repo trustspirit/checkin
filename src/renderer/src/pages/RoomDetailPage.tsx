@@ -13,6 +13,7 @@ import { userNameAtom } from '../stores/userStore'
 import { writeAuditLog } from '../services/auditLog'
 import type { Room, RoomGenderType, RoomType } from '../types'
 import { DetailPageSkeleton } from '../components'
+import { LeaderBadge, ConfirmDialog } from '../components/ui'
 
 function RoomDetailPage(): React.ReactElement {
   const { t } = useTranslation()
@@ -35,6 +36,12 @@ function RoomDetailPage(): React.ReactElement {
   const [editRoomType, setEditRoomType] = useState<RoomType | ''>('')
 
   const [movingParticipantId, setMovingParticipantId] = useState<string | null>(null)
+  const [leaderConfirm, setLeaderConfirm] = useState<{
+    open: boolean
+    participantId: string
+    participantName: string
+    isRemoving: boolean
+  }>({ open: false, participantId: '', participantName: '', isRemoving: false })
 
   useEffect(() => {
     const init = async () => {
@@ -170,6 +177,43 @@ function RoomDetailPage(): React.ReactElement {
         type: 'error',
         message: error instanceof Error ? error.message : t('toast.moveParticipantFailed')
       })
+    }
+  }
+
+  const handleSetLeader = async () => {
+    if (!room || !id) return
+
+    try {
+      const { participantId, participantName, isRemoving } = leaderConfirm
+
+      await updateRoom(id, {
+        leaderId: isRemoving ? null : participantId,
+        leaderName: isRemoving ? null : participantName
+      })
+
+      await writeAuditLog(
+        userName || 'Unknown',
+        'update',
+        'room',
+        id,
+        `Room ${room.roomNumber}`,
+        {
+          leader: {
+            from: room.leaderName || null,
+            to: isRemoving ? null : participantName
+          }
+        }
+      )
+
+      await sync()
+      setLeaderConfirm({ open: false, participantId: '', participantName: '', isRemoving: false })
+      addToast({
+        type: 'success',
+        message: isRemoving ? t('room.leaderRemoved') : t('room.leaderSet')
+      })
+    } catch (error) {
+      console.error('Set leader error:', error)
+      addToast({ type: 'error', message: t('toast.updateRoomFailed') })
     }
   }
 
@@ -401,42 +445,51 @@ function RoomDetailPage(): React.ReactElement {
 
           {roomParticipants.length > 0 ? (
             <div className="space-y-3">
-              {roomParticipants.map((participant) => (
-                <div
-                  key={participant.id}
-                  className="flex items-center justify-between p-4 bg-[#F0F2F5] rounded-lg border border-transparent hover:border-[#DADDE1] transition-colors group"
-                >
-                  <div>
-                    <Link
-                      to={`/participant/${participant.id}`}
-                      className="text-lg font-semibold text-[#050505] hover:text-[#1877F2] hover:underline block"
-                    >
-                      {participant.name}
-                    </Link>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {participant.groupId && (
+              {roomParticipants.map((participant) => {
+                const isLeader = room.leaderId === participant.id
+                return (
+                  <div
+                    key={participant.id}
+                    className={`flex items-center justify-between p-4 rounded-lg border transition-colors group ${
+                      isLeader
+                        ? 'bg-amber-50 border-amber-200 hover:border-amber-300'
+                        : 'bg-[#F0F2F5] border-transparent hover:border-[#DADDE1]'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
                         <Link
-                          to={`/groups/${participant.groupId}`}
-                          className="text-sm text-[#1877F2] hover:underline"
+                          to={`/participant/${participant.id}`}
+                          className="text-lg font-semibold text-[#050505] hover:text-[#1877F2] hover:underline"
                         >
-                          {groups.find((g) => g.id === participant.groupId)?.name ||
-                            participant.groupName}
+                          {participant.name}
                         </Link>
-                      )}
-                      {participant.groupId && (participant.ward || participant.stake) && (
-                        <span className="text-[#DADDE1]">•</span>
-                      )}
-                      {(participant.ward || participant.stake) && (
-                        <span className="text-sm text-[#65676B]">
-                          {participant.ward}
-                          {participant.ward && participant.stake ? ', ' : ''}
-                          {participant.stake}
-                        </span>
-                      )}
+                        {isLeader && <LeaderBadge type="room" size="sm" />}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {participant.groupId && (
+                          <Link
+                            to={`/groups/${participant.groupId}`}
+                            className="text-sm text-[#1877F2] hover:underline"
+                          >
+                            {groups.find((g) => g.id === participant.groupId)?.name ||
+                              participant.groupName}
+                          </Link>
+                        )}
+                        {participant.groupId && (participant.ward || participant.stake) && (
+                          <span className="text-[#DADDE1]">•</span>
+                        )}
+                        {(participant.ward || participant.stake) && (
+                          <span className="text-sm text-[#65676B]">
+                            {participant.ward}
+                            {participant.ward && participant.stake ? ', ' : ''}
+                            {participant.stake}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                     <div className="relative">
                       <button
                         onClick={() =>
@@ -500,15 +553,34 @@ function RoomDetailPage(): React.ReactElement {
                       )}
                     </div>
 
-                    <button
-                      onClick={() => handleRemoveParticipant(participant.id, participant.name)}
-                      className="px-3 py-1.5 bg-white border border-[#DADDE1] text-[#FA383E] text-sm font-semibold rounded hover:bg-[#FFF5F5] transition-colors"
-                    >
-                      {t('common.remove')}
-                    </button>
+                      <button
+                        onClick={() =>
+                          setLeaderConfirm({
+                            open: true,
+                            participantId: participant.id,
+                            participantName: participant.name,
+                            isRemoving: isLeader
+                          })
+                        }
+                        className={`px-3 py-1.5 bg-white border text-sm font-semibold rounded transition-colors ${
+                          isLeader
+                            ? 'border-amber-300 text-amber-700 hover:bg-amber-50'
+                            : 'border-[#DADDE1] text-amber-600 hover:bg-amber-50'
+                        }`}
+                      >
+                        {isLeader ? t('room.removeLeader') : t('room.setLeader')}
+                      </button>
+
+                      <button
+                        onClick={() => handleRemoveParticipant(participant.id, participant.name)}
+                        className="px-3 py-1.5 bg-white border border-[#DADDE1] text-[#FA383E] text-sm font-semibold rounded hover:bg-[#FFF5F5] transition-colors"
+                      >
+                        {t('common.remove')}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <div className="text-center py-12 bg-[#F0F2F5] rounded-lg border-2 border-dashed border-[#DADDE1]">
@@ -524,6 +596,22 @@ function RoomDetailPage(): React.ReactElement {
           onClick={() => setMovingParticipantId(null)}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={leaderConfirm.open}
+        onClose={() =>
+          setLeaderConfirm({ open: false, participantId: '', participantName: '', isRemoving: false })
+        }
+        onConfirm={handleSetLeader}
+        title={leaderConfirm.isRemoving ? t('room.removeLeader') : t('room.setLeader')}
+        message={
+          leaderConfirm.isRemoving
+            ? t('room.confirmRemoveLeader')
+            : t('room.confirmSetLeader', { name: leaderConfirm.participantName })
+        }
+        confirmText={t('common.confirm')}
+        variant={leaderConfirm.isRemoving ? 'danger' : 'primary'}
+      />
     </div>
   )
 }

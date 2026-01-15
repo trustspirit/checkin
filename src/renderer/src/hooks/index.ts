@@ -57,3 +57,6 @@ export { useParticipantsListPage } from './useParticipantsListPage'
 export { useParticipantsTabLogic } from './useParticipantsTabLogic'
 export { useGroupsTabLogic } from './useGroupsTabLogic'
 export { useRoomsTabLogic } from './useRoomsTabLogic'
+
+// Bus management hook
+export { useBusManagement } from './useBusManagement'
