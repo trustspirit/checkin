@@ -14,6 +14,7 @@ export interface Participant {
   name: string
   gender: Gender
   age: number
+  birthDate?: string // YYYY-MM-DD 형식
   stake: string
   ward: string
   phoneNumber: string
@@ -72,6 +73,7 @@ export interface CSVParticipantRow {
   name: string
   gender: string
   age: string
+  birthDate?: string
   stake: string
   ward: string
   phoneNumber: string

@@ -23,6 +23,10 @@ import {
   ROOMS_COLLECTION,
   convertTimestamp
 } from './config'
+import {
+  generateKeyFromParticipant,
+  isValidParticipantKey
+} from '../../utils/generateParticipantKey'
 
 // Helper to parse participant document
 const parseParticipantDoc = (docSnap: QueryDocumentSnapshot): Participant => {
@@ -52,34 +56,62 @@ export const searchParticipants = async (searchTerm: string): Promise<Participan
   if (!searchTerm.trim()) return []
 
   const searchLower = searchTerm.toLowerCase()
+  const searchUpper = searchTerm.toUpperCase()
+  const isKeySearch = isValidParticipantKey(searchUpper)
+
   const participantsRef = collection(getDb(), PARTICIPANTS_COLLECTION)
   const snapshot = await getDocs(participantsRef)
 
   const participants: Participant[] = []
+  const keyMatchPromises: Promise<{ participant: Participant; matches: boolean }>[] = []
+
   snapshot.forEach((docSnap) => {
     const data = docSnap.data()
     const name = (data.name || '').toLowerCase()
     const email = (data.email || '').toLowerCase()
     const phone = (data.phoneNumber || '').toLowerCase()
 
+    const participant: Participant = {
+      id: docSnap.id,
+      ...data,
+      isPaid: data.isPaid ?? false,
+      memo: data.memo || '',
+      birthDate: data.birthDate || undefined,
+      checkIns: (data.checkIns || []).map(
+        (ci: { id: string; checkInTime: Timestamp; checkOutTime?: Timestamp }) => ({
+          ...ci,
+          checkInTime: convertTimestamp(ci.checkInTime),
+          checkOutTime: ci.checkOutTime ? convertTimestamp(ci.checkOutTime) : undefined
+        })
+      ),
+      createdAt: convertTimestamp(data.createdAt),
+      updatedAt: convertTimestamp(data.updatedAt)
+    } as Participant
+
+    // 일반 검색 (이름, 이메일, 전화번호)
     if (name.includes(searchLower) || email.includes(searchLower) || phone.includes(searchLower)) {
-      participants.push({
-        id: docSnap.id,
-        ...data,
-        isPaid: data.isPaid ?? false,
-        memo: data.memo || '',
-        checkIns: (data.checkIns || []).map(
-          (ci: { id: string; checkInTime: Timestamp; checkOutTime?: Timestamp }) => ({
-            ...ci,
-            checkInTime: convertTimestamp(ci.checkInTime),
-            checkOutTime: ci.checkOutTime ? convertTimestamp(ci.checkOutTime) : undefined
-          })
-        ),
-        createdAt: convertTimestamp(data.createdAt),
-        updatedAt: convertTimestamp(data.updatedAt)
-      } as Participant)
+      participants.push(participant)
+    }
+    // 키 검색이 가능한 경우 (8자리 대문자+숫자)
+    else if (isKeySearch && participant.birthDate) {
+      keyMatchPromises.push(
+        generateKeyFromParticipant(participant.name, participant.birthDate).then((key) => ({
+          participant,
+          matches: key === searchUpper
+        }))
+      )
     }
   })
+
+  // 키 매칭 결과 처리
+  if (keyMatchPromises.length > 0) {
+    const keyResults = await Promise.all(keyMatchPromises)
+    for (const result of keyResults) {
+      if (result.matches) {
+        participants.push(result.participant)
+      }
+    }
+  }
 
   return participants.slice(0, 10)
 }
@@ -277,6 +309,7 @@ export interface CreateParticipantData {
   email: string
   gender?: string
   age?: number
+  birthDate?: string
   stake?: string
   ward?: string
   phoneNumber?: string
@@ -293,6 +326,7 @@ export interface UpdateParticipantData {
   email?: string
   gender?: string
   age?: number
+  birthDate?: string
   stake?: string
   ward?: string
   phoneNumber?: string
@@ -319,6 +353,7 @@ export const addParticipant = async (data: CreateParticipantData): Promise<Parti
     email: data.email,
     gender: data.gender || '',
     age: data.age || 0,
+    birthDate: data.birthDate || null,
     stake: data.stake || '',
     ward: data.ward || '',
     phoneNumber: data.phoneNumber || '',
@@ -397,6 +432,7 @@ export const updateParticipant = async (
   if (data.email !== undefined) updateData.email = data.email
   if (data.gender !== undefined) updateData.gender = data.gender
   if (data.age !== undefined) updateData.age = data.age
+  if (data.birthDate !== undefined) updateData.birthDate = data.birthDate
   if (data.stake !== undefined) updateData.stake = data.stake
   if (data.ward !== undefined) updateData.ward = data.ward
   if (data.phoneNumber !== undefined) updateData.phoneNumber = data.phoneNumber

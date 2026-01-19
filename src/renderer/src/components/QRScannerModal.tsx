@@ -6,11 +6,17 @@ import { useAtomValue, useSetAtom } from 'jotai'
 import { participantsAtom } from '../stores/dataStore'
 import { addToastAtom } from '../stores/toastStore'
 import { userNameAtom } from '../stores/userStore'
-import { checkInParticipant, checkOutParticipant, getParticipantById } from '../services/firebase'
+import {
+  checkInParticipant,
+  checkOutParticipant,
+  getParticipantById,
+  searchParticipants
+} from '../services/firebase'
 import { writeAuditLog } from '../services/auditLog'
 import type { Participant } from '../types'
 import { CheckInStatus } from '../types'
 import { getCheckInStatusFromParticipant } from './CheckInStatusBadge'
+import { isValidParticipantKey } from '../utils/generateParticipantKey'
 
 interface QRScannerModalProps {
   isOpen: boolean
@@ -104,6 +110,7 @@ function QRScannerModal({
     try {
       // Parse QR data
       let participantId: string | null = null
+      let searchKey: string | null = null
 
       try {
         const qrData = JSON.parse(decodedText)
@@ -115,20 +122,41 @@ function QRScannerModal({
         if (decodedText.startsWith('CHECKIN:')) {
           participantId = decodedText.substring(8)
         }
+        // Try KEY:XXXXXXXX format (from key-generator)
+        else if (decodedText.startsWith('KEY:')) {
+          const key = decodedText.substring(4)
+          if (isValidParticipantKey(key)) {
+            searchKey = key
+          }
+        }
+        // Try direct key format (8 char alphanumeric)
+        else if (isValidParticipantKey(decodedText)) {
+          searchKey = decodedText
+        }
       }
 
-      if (!participantId) {
+      let participant: Participant | undefined
+
+      // Search by participant ID
+      if (participantId) {
+        participant = participants.find((p) => p.id === participantId)
+        // If not in local state, try fetching from Firebase
+        if (!participant) {
+          participant = (await getParticipantById(participantId)) || undefined
+        }
+      }
+      // Search by unique key
+      else if (searchKey) {
+        const searchResults = await searchParticipants(searchKey)
+        if (searchResults.length > 0) {
+          participant = searchResults[0]
+        }
+      }
+
+      if (!participantId && !searchKey) {
         setError(t('qr.invalidQRCode'))
         resumeScanning()
         return
-      }
-
-      // Find participant
-      let participant = participants.find((p) => p.id === participantId)
-
-      // If not in local state, try fetching from Firebase
-      if (!participant) {
-        participant = (await getParticipantById(participantId)) || undefined
       }
 
       if (!participant) {
