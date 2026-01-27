@@ -26,7 +26,7 @@ import {
   PrintableGroupRoster,
   GroupHoverContent
 } from '../components'
-import { HoverCard, LeaderBadge } from '../components/ui'
+import { HoverCard } from '../components/ui'
 
 function GroupsPage(): React.ReactElement {
   const { t } = useTranslation()

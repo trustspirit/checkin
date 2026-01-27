@@ -26,7 +26,7 @@ import {
   PrintableRoomAssignment,
   RoomHoverContent
 } from '../components'
-import { HoverCard, LeaderBadge } from '../components/ui'
+import { HoverCard } from '../components/ui'
 
 function RoomsPage(): React.ReactElement {
   const { t } = useTranslation()

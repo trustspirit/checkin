@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useCallback } from 'react'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { schedulesAtom, selectedDateAtom, updateScheduleAtom } from '../../stores/scheduleStore'
 import type { ScheduleEvent } from '../../types'
@@ -6,6 +6,11 @@ import ScheduleEventCard from './ScheduleEventCard'
 import QuickAddPopover from './QuickAddPopover'
 import {
   HOURS,
+  HOUR_HEIGHT,
+  HALF_HOUR_HEIGHT,
+  yToTime,
+  timeToY,
+  clampHours,
   getEventsForDay,
   calculateEventPosition,
   isToday,
@@ -13,27 +18,11 @@ import {
   createDateWithTime,
   getCurrentTimePosition
 } from './scheduleUtils'
+import { useScheduleGrid, type TimeRange } from './useScheduleGrid'
 
 interface ScheduleDayViewProps {
   onEventClick: (event: ScheduleEvent) => void
   onOpenAddModal: (date: Date, startTime: string, endTime: string) => void
-}
-
-const HOUR_HEIGHT = 60
-const HALF_HOUR_HEIGHT = 30 // pixels per 30 minutes
-
-// Convert Y position to time (hours and minutes)
-const yToTime = (y: number): { hours: number; minutes: number } => {
-  const totalMinutes = Math.floor(y / HALF_HOUR_HEIGHT) * 30 + HOURS[0] * 60
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-  return { hours, minutes }
-}
-
-// Convert time to Y position
-const timeToY = (hours: number, minutes: number): number => {
-  const totalMinutes = hours * 60 + minutes - HOURS[0] * 60
-  return (totalMinutes / 30) * HALF_HOUR_HEIGHT
 }
 
 function ScheduleDayView({
@@ -47,86 +36,64 @@ function ScheduleDayView({
   const eventGroups = groupOverlappingEvents(dayEvents)
   const today = isToday(selectedDate)
 
-  // Quick add state
-  const [quickAdd, setQuickAdd] = useState<{
-    isOpen: boolean
-    position: { x: number; y: number }
-    date: Date
-    startTime: Date
-    endTime: Date
-  } | null>(null)
-
-  // Drag selection state (now using minutes for 30-min precision)
-  const [dragSelection, setDragSelection] = useState<{
-    startHours: number
-    startMinutes: number
-    endHours: number
-    endMinutes: number
-  } | null>(null)
-  const isDragging = useRef(false)
-  const justFinishedDragging = useRef(false)
-
-  // Keep selection visible while quick add is open
-  const [persistedSelection, setPersistedSelection] = useState<{
-    startHours: number
-    startMinutes: number
-    endHours: number
-    endMinutes: number
-  } | null>(null)
-
-  // Event drag state
-  const [draggedEvent, setDraggedEvent] = useState<ScheduleEvent | null>(null)
-  const [dropTarget, setDropTarget] = useState<{ hours: number; minutes: number } | null>(null)
-
-  // Hover highlight state
-  const [hoverCell, setHoverCell] = useState<{ hours: number; minutes: number } | null>(null)
+  // Use shared grid interactions hook
+  const {
+    quickAdd,
+    setQuickAdd,
+    closeQuickAdd,
+    dragSelection,
+    setDragSelection,
+    isDragging,
+    justFinishedDragging,
+    persistedSelection,
+    setPersistedSelection,
+    draggedEvent,
+    setDraggedEvent,
+    dropTarget,
+    setDropTarget,
+    hoverCell,
+    setHoverCell,
+    handleCellLeave,
+    handleEventHoverStart,
+    handleEventDragStart,
+    handleEventDragEnd,
+    handleDragLeave
+  } = useScheduleGrid()
 
   const handleCellHover = useCallback(
     (e: React.MouseEvent) => {
-      // Don't show hover when dragging selection, dragging event, or quick add is open
       if (isDragging.current || draggedEvent || quickAdd) return
 
       const rect = e.currentTarget.getBoundingClientRect()
       const y = e.clientY - rect.top
       const { hours, minutes } = yToTime(y)
-
-      // Clamp to valid range
-      const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
+      const clampedHours = clampHours(hours)
 
       setHoverCell({ hours: clampedHours, minutes })
     },
-    [draggedEvent, quickAdd]
+    [draggedEvent, quickAdd, setHoverCell]
   )
 
-  const handleCellLeave = useCallback(() => {
-    if (!draggedEvent) {
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return
+
+      const rect = e.currentTarget.getBoundingClientRect()
+      const y = e.clientY - rect.top
+      const { hours, minutes } = yToTime(y)
+      const clampedHours = clampHours(hours)
+
+      isDragging.current = true
       setHoverCell(null)
-    }
-  }, [draggedEvent])
-
-  const handleEventHoverStart = useCallback(() => {
-    setHoverCell(null)
-  }, [])
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0) return
-
-    const rect = e.currentTarget.getBoundingClientRect()
-    const y = e.clientY - rect.top
-    const { hours, minutes } = yToTime(y)
-
-    // Clamp to valid range
-    const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
-
-    isDragging.current = true
-    setHoverCell(null) // Clear hover when starting drag selection
-    setDragSelection({
-      startHours: clampedHours,
-      startMinutes: minutes,
-      endHours: clampedHours,
-      endMinutes: minutes + 30 >= 60 ? 0 : minutes + 30
-    })
-  }, [])
+      setDragSelection({
+        startHours: clampedHours,
+        startMinutes: minutes,
+        endHours: clampedHours,
+        endMinutes: minutes + 30 >= 60 ? 0 : minutes + 30
+      })
+    },
+    [setHoverCell, setDragSelection]
+  )
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
@@ -135,9 +102,7 @@ function ScheduleDayView({
       const rect = e.currentTarget.getBoundingClientRect()
       const y = Math.max(0, Math.min(e.clientY - rect.top, HOURS.length * HOUR_HEIGHT))
       const { hours, minutes } = yToTime(y)
-
-      // Clamp to valid range
-      const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1] + 1, hours))
+      const clampedHours = Math.min(clampHours(hours), HOURS[HOURS.length - 1] + 1)
 
       setDragSelection((prev) => {
         if (!prev) return null
@@ -207,9 +172,7 @@ function ScheduleDayView({
       const rect = e.currentTarget.getBoundingClientRect()
       const y = e.clientY - rect.top
       const { hours, minutes } = yToTime(y)
-
-      // Clamp to valid range
-      const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
+      const clampedHours = clampHours(hours)
 
       const startTime = createDateWithTime(selectedDate, clampedHours, minutes)
       // Default to 30 min duration for click
@@ -239,35 +202,20 @@ function ScheduleDayView({
     [selectedDate]
   )
 
-  // Event drag handlers
-  const handleEventDragStart = useCallback((event: ScheduleEvent) => {
-    setDraggedEvent(event)
-    setHoverCell(null) // Clear hover when starting event drag
-  }, [])
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
 
-  const handleEventDragEnd = useCallback(() => {
-    setDraggedEvent(null)
-    setDropTarget(null)
-    setHoverCell(null) // Clear hover when ending event drag
-  }, [])
+      const rect = e.currentTarget.getBoundingClientRect()
+      const y = e.clientY - rect.top
+      const { hours, minutes } = yToTime(y)
+      const clampedHours = clampHours(hours)
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-
-    const rect = e.currentTarget.getBoundingClientRect()
-    const y = e.clientY - rect.top
-    const { hours, minutes } = yToTime(y)
-
-    // Clamp to valid range
-    const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
-
-    setDropTarget({ hours: clampedHours, minutes })
-  }, [])
-
-  const handleDragLeave = useCallback(() => {
-    setDropTarget(null)
-  }, [])
+      setDropTarget({ hours: clampedHours, minutes })
+    },
+    [setDropTarget]
+  )
 
   const handleDrop = useCallback(
     async (e: React.DragEvent) => {
@@ -278,9 +226,7 @@ function ScheduleDayView({
         const rect = e.currentTarget.getBoundingClientRect()
         const y = e.clientY - rect.top
         const { hours, minutes } = yToTime(y)
-
-        // Clamp to valid range
-        const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
+        const clampedHours = clampHours(hours)
 
         // Calculate duration of the original event
         const originalStart = new Date(eventData.startTime)
@@ -498,10 +444,7 @@ function ScheduleDayView({
       {quickAdd && (
         <QuickAddPopover
           isOpen={quickAdd.isOpen}
-          onClose={() => {
-            setQuickAdd(null)
-            setPersistedSelection(null)
-          }}
+          onClose={closeQuickAdd}
           position={quickAdd.position}
           date={quickAdd.date}
           startTime={quickAdd.startTime}

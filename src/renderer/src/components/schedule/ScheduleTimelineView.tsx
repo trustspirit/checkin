@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react'
+import React, { useCallback, useMemo } from 'react'
 import { useAtomValue, useSetAtom } from 'jotai'
 import {
   schedulesAtom,
@@ -13,6 +13,9 @@ import ScheduleEventCard from './ScheduleEventCard'
 import QuickAddPopover from './QuickAddPopover'
 import {
   HOURS,
+  HOUR_WIDTH,
+  ROW_HEIGHT,
+  clampHours,
   getWeekDates,
   getCustomDateRange,
   getEventsForDay,
@@ -20,15 +23,14 @@ import {
   isToday,
   createDateWithTime
 } from './scheduleUtils'
+import { useScheduleGrid, type TimeRangeWithIndex, type DropTargetWithIndex } from './useScheduleGrid'
 
 interface ScheduleTimelineViewProps {
   onEventClick: (event: ScheduleEvent) => void
   onOpenAddModal: (date: Date, startTime: string, endTime: string) => void
 }
 
-const HOUR_WIDTH = 80 // pixels per hour
 const HALF_HOUR_WIDTH = 40 // pixels per 30 minutes
-const ROW_HEIGHT = 80 // pixels per row
 
 // Convert X position to time (hours and minutes)
 const xToTime = (x: number): { hours: number; minutes: number } => {
@@ -63,120 +65,92 @@ function ScheduleTimelineView({
     return [selectedDate]
   }, [viewMode, selectedDate, customStartDate, customEndDate])
 
-  // Quick add state
-  const [quickAdd, setQuickAdd] = useState<{
-    isOpen: boolean
-    position: { x: number; y: number }
-    date: Date
-    startTime: Date
-    endTime: Date
-  } | null>(null)
+  // Use shared grid interactions hook (using rowIndex instead of dayIndex)
+  const {
+    quickAdd,
+    setQuickAdd,
+    closeQuickAdd,
+    dragSelection,
+    setDragSelection,
+    isDragging,
+    justFinishedDragging,
+    persistedSelection,
+    setPersistedSelection,
+    draggedEvent,
+    dropTarget,
+    setDropTarget,
+    hoverCell,
+    setHoverCell,
+    handleCellLeave,
+    handleEventHoverStart,
+    handleEventDragStart,
+    handleEventDragEnd,
+    handleDragLeave
+  } = useScheduleGrid({ multiDay: true })
 
-  // Drag state (now using minutes for 30-min precision)
-  const [dragSelection, setDragSelection] = useState<{
-    rowIndex: number
-    startHours: number
-    startMinutes: number
-    endHours: number
-    endMinutes: number
-  } | null>(null)
-  const isDragging = useRef(false)
-  const justFinishedDragging = useRef(false)
-
-  // Keep selection visible while quick add is open
-  const [persistedSelection, setPersistedSelection] = useState<{
-    rowIndex: number
-    startHours: number
-    startMinutes: number
-    endHours: number
-    endMinutes: number
-  } | null>(null)
-
-  // Event drag state
-  const [draggedEvent, setDraggedEvent] = useState<ScheduleEvent | null>(null)
-  const [dropTarget, setDropTarget] = useState<{
-    rowIndex: number
-    hours: number
-    minutes: number
-  } | null>(null)
-
-  // Hover highlight state
-  const [hoverCell, setHoverCell] = useState<{
-    rowIndex: number
-    hours: number
-    minutes: number
-  } | null>(null)
+  // Type assertions for timeline view (using rowIndex)
+  const typedDragSelection = dragSelection as TimeRangeWithIndex | null
+  const typedPersistedSelection = persistedSelection as TimeRangeWithIndex | null
+  const typedDropTarget = dropTarget as DropTargetWithIndex | null
+  const typedHoverCell = hoverCell as { rowIndex?: number; hours: number; minutes: number } | null
 
   const handleCellHover = useCallback(
     (e: React.MouseEvent, rowIndex: number) => {
-      // Don't show hover when dragging selection, dragging event, or quick add is open
       if (isDragging.current || draggedEvent || quickAdd) return
 
       const rect = e.currentTarget.getBoundingClientRect()
       const x = e.clientX - rect.left
       const { hours, minutes } = xToTime(x)
-
-      // Clamp to valid range
-      const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
+      const clampedHours = clampHours(hours)
 
       setHoverCell({ rowIndex, hours: clampedHours, minutes })
     },
-    [draggedEvent, quickAdd]
+    [draggedEvent, quickAdd, setHoverCell]
   )
 
-  const handleCellLeave = useCallback(() => {
-    if (!draggedEvent) {
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent, rowIndex: number) => {
+      if (e.button !== 0) return
+
+      const rect = e.currentTarget.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const { hours, minutes } = xToTime(x)
+      const clampedHours = clampHours(hours)
+
+      isDragging.current = true
       setHoverCell(null)
-    }
-  }, [draggedEvent])
-
-  const handleEventHoverStart = useCallback(() => {
-    setHoverCell(null)
-  }, [])
-
-  const handleMouseDown = useCallback((e: React.MouseEvent, rowIndex: number) => {
-    if (e.button !== 0) return
-
-    const rect = e.currentTarget.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const { hours, minutes } = xToTime(x)
-
-    // Clamp to valid range
-    const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
-
-    isDragging.current = true
-    setHoverCell(null) // Clear hover when starting drag selection
-    setDragSelection({
-      rowIndex,
-      startHours: clampedHours,
-      startMinutes: minutes,
-      endHours: clampedHours,
-      endMinutes: minutes + 30 >= 60 ? 0 : minutes + 30
-    })
-  }, [])
+      setDragSelection({
+        rowIndex,
+        startHours: clampedHours,
+        startMinutes: minutes,
+        endHours: clampedHours,
+        endMinutes: minutes + 30 >= 60 ? 0 : minutes + 30
+      })
+    },
+    [setHoverCell, setDragSelection]
+  )
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent, rowIndex: number) => {
-      if (!isDragging.current || !dragSelection || dragSelection.rowIndex !== rowIndex) return
+      if (!isDragging.current || !typedDragSelection || typedDragSelection.rowIndex !== rowIndex)
+        return
 
       const rect = e.currentTarget.getBoundingClientRect()
       const x = Math.max(0, Math.min(e.clientX - rect.left, HOURS.length * HOUR_WIDTH))
       const { hours, minutes } = xToTime(x)
-
-      // Clamp to valid range
-      const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1] + 1, hours))
+      const clampedHours = Math.min(clampHours(hours), HOURS[HOURS.length - 1] + 1)
 
       setDragSelection((prev) => {
         if (!prev) return null
         return { ...prev, endHours: clampedHours, endMinutes: minutes }
       })
     },
-    [dragSelection]
+    [typedDragSelection, setDragSelection]
   )
 
   const handleMouseUp = useCallback(
     (e: React.MouseEvent) => {
-      if (!isDragging.current || !dragSelection) {
+      if (!isDragging.current || !typedDragSelection || typedDragSelection.rowIndex === undefined) {
         isDragging.current = false
         return
       }
@@ -184,11 +158,11 @@ function ScheduleTimelineView({
       isDragging.current = false
       justFinishedDragging.current = true
 
-      const date = dates[dragSelection.rowIndex]
+      const date = dates[typedDragSelection.rowIndex]
 
       // Calculate start and end times
-      const startTotal = dragSelection.startHours * 60 + dragSelection.startMinutes
-      const endTotal = dragSelection.endHours * 60 + dragSelection.endMinutes
+      const startTotal = typedDragSelection.startHours * 60 + typedDragSelection.startMinutes
+      const endTotal = typedDragSelection.endHours * 60 + typedDragSelection.endMinutes
 
       const minTotal = Math.min(startTotal, endTotal)
       const maxTotal = Math.max(startTotal, endTotal)
@@ -201,7 +175,7 @@ function ScheduleTimelineView({
 
       // Persist the selection for display while quick add is open
       setPersistedSelection({
-        rowIndex: dragSelection.rowIndex,
+        rowIndex: typedDragSelection.rowIndex,
         startHours: Math.floor(minTotal / 60),
         startMinutes: minTotal % 60,
         endHours: Math.floor(finalEndTotal / 60),
@@ -218,7 +192,7 @@ function ScheduleTimelineView({
 
       setDragSelection(null)
     },
-    [dragSelection, dates]
+    [typedDragSelection, dates, setPersistedSelection, setQuickAdd, setDragSelection]
   )
 
   const handleCellClick = useCallback(
@@ -233,9 +207,7 @@ function ScheduleTimelineView({
       const rect = e.currentTarget.getBoundingClientRect()
       const x = e.clientX - rect.left
       const { hours, minutes } = xToTime(x)
-
-      // Clamp to valid range
-      const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
+      const clampedHours = clampHours(hours)
 
       const date = dates[rowIndex]
       const startTime = createDateWithTime(date, clampedHours, minutes)
@@ -264,38 +236,23 @@ function ScheduleTimelineView({
         endTime
       })
     },
-    [dates]
+    [dates, setPersistedSelection, setQuickAdd]
   )
 
-  // Event drag handlers
-  const handleEventDragStart = useCallback((event: ScheduleEvent) => {
-    setDraggedEvent(event)
-    setHoverCell(null) // Clear hover when starting event drag
-  }, [])
+  const handleDragOver = useCallback(
+    (e: React.DragEvent, rowIndex: number) => {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
 
-  const handleEventDragEnd = useCallback(() => {
-    setDraggedEvent(null)
-    setDropTarget(null)
-    setHoverCell(null) // Clear hover when ending event drag
-  }, [])
+      const rect = e.currentTarget.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const { hours, minutes } = xToTime(x)
+      const clampedHours = clampHours(hours)
 
-  const handleDragOver = useCallback((e: React.DragEvent, rowIndex: number) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-
-    const rect = e.currentTarget.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const { hours, minutes } = xToTime(x)
-
-    // Clamp to valid range
-    const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
-
-    setDropTarget({ rowIndex, hours: clampedHours, minutes })
-  }, [])
-
-  const handleDragLeave = useCallback(() => {
-    setDropTarget(null)
-  }, [])
+      setDropTarget({ rowIndex, hours: clampedHours, minutes })
+    },
+    [setDropTarget]
+  )
 
   const handleDrop = useCallback(
     async (e: React.DragEvent, rowIndex: number) => {
@@ -306,9 +263,7 @@ function ScheduleTimelineView({
         const rect = e.currentTarget.getBoundingClientRect()
         const x = e.clientX - rect.left
         const { hours, minutes } = xToTime(x)
-
-        // Clamp to valid range
-        const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
+        const clampedHours = clampHours(hours)
 
         // Calculate duration of the original event
         const originalStart = new Date(eventData.startTime)
@@ -332,9 +287,7 @@ function ScheduleTimelineView({
         console.error('Failed to drop event:', error)
       }
 
-      setDraggedEvent(null)
-      setDropTarget(null)
-      setHoverCell(null)
+      handleEventDragEnd()
       setPersistedSelection(null)
     },
     [dates, updateSchedule]
@@ -407,7 +360,7 @@ function ScheduleTimelineView({
 
               {/* Timeline area */}
               <div
-                className={`relative flex-1 cursor-pointer ${draggedEvent && dropTarget?.rowIndex === rowIndex ? 'bg-[#E7F3FF]/50' : ''}`}
+                className={`relative flex-1 cursor-pointer ${draggedEvent && typedDropTarget?.rowIndex === rowIndex ? 'bg-[#E7F3FF]/50' : ''}`}
                 style={{ minWidth: HOURS.length * HOUR_WIDTH, height: ROW_HEIGHT }}
                 onMouseDown={(e) => !draggedEvent && handleMouseDown(e, rowIndex)}
                 onMouseMove={(e) => {
@@ -438,25 +391,27 @@ function ScheduleTimelineView({
                 </div>
 
                 {/* Hover highlight */}
-                {hoverCell &&
-                  hoverCell.rowIndex === rowIndex &&
-                  !dragSelection &&
+                {typedHoverCell &&
+                  typedHoverCell.rowIndex === rowIndex &&
+                  !typedDragSelection &&
                   !draggedEvent && (
                     <div
                       className="absolute top-2 bottom-2 bg-[#1877F2]/10 rounded-md pointer-events-none z-5 transition-all duration-75"
                       style={{
-                        left: timeToX(hoverCell.hours, hoverCell.minutes),
+                        left: timeToX(typedHoverCell.hours, typedHoverCell.minutes),
                         width: HALF_HOUR_WIDTH
                       }}
                     />
                   )}
 
                 {/* Drag selection overlay */}
-                {dragSelection &&
-                  dragSelection.rowIndex === rowIndex &&
+                {typedDragSelection &&
+                  typedDragSelection.rowIndex === rowIndex &&
                   (() => {
-                    const startTotal = dragSelection.startHours * 60 + dragSelection.startMinutes
-                    const endTotal = dragSelection.endHours * 60 + dragSelection.endMinutes
+                    const startTotal =
+                      typedDragSelection.startHours * 60 + typedDragSelection.startMinutes
+                    const endTotal =
+                      typedDragSelection.endHours * 60 + typedDragSelection.endMinutes
                     const minTotal = Math.min(startTotal, endTotal)
                     const maxTotal = Math.max(startTotal, endTotal)
                     const left = timeToX(Math.floor(minTotal / 60), minTotal % 60)
@@ -473,17 +428,17 @@ function ScheduleTimelineView({
                   })()}
 
                 {/* Persisted selection overlay (shown while quick add is open) */}
-                {persistedSelection &&
-                  persistedSelection.rowIndex === rowIndex &&
-                  !dragSelection &&
+                {typedPersistedSelection &&
+                  typedPersistedSelection.rowIndex === rowIndex &&
+                  !typedDragSelection &&
                   (() => {
                     const startTotal =
-                      persistedSelection.startHours * 60 + persistedSelection.startMinutes
+                      typedPersistedSelection.startHours * 60 + typedPersistedSelection.startMinutes
                     const endTotal =
-                      persistedSelection.endHours * 60 + persistedSelection.endMinutes
+                      typedPersistedSelection.endHours * 60 + typedPersistedSelection.endMinutes
                     const left = timeToX(
-                      persistedSelection.startHours,
-                      persistedSelection.startMinutes
+                      typedPersistedSelection.startHours,
+                      typedPersistedSelection.startMinutes
                     )
                     const width = Math.max(
                       ((endTotal - startTotal) / 60) * HOUR_WIDTH,
@@ -499,13 +454,13 @@ function ScheduleTimelineView({
 
                 {/* Drop preview indicator */}
                 {draggedEvent &&
-                  dropTarget?.rowIndex === rowIndex &&
+                  typedDropTarget?.rowIndex === rowIndex &&
                   (() => {
                     const originalStart = new Date(draggedEvent.startTime)
                     const originalEnd = new Date(draggedEvent.endTime)
                     const durationMs = originalEnd.getTime() - originalStart.getTime()
                     const durationMins = durationMs / (1000 * 60)
-                    const left = timeToX(dropTarget.hours, dropTarget.minutes)
+                    const left = timeToX(typedDropTarget.hours, typedDropTarget.minutes)
                     const width = (durationMins / 60) * HOUR_WIDTH
                     return (
                       <div
@@ -564,10 +519,7 @@ function ScheduleTimelineView({
       {quickAdd && (
         <QuickAddPopover
           isOpen={quickAdd.isOpen}
-          onClose={() => {
-            setQuickAdd(null)
-            setPersistedSelection(null)
-          }}
+          onClose={closeQuickAdd}
           position={quickAdd.position}
           date={quickAdd.date}
           startTime={quickAdd.startTime}

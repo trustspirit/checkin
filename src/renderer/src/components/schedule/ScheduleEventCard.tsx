@@ -74,7 +74,6 @@ function ScheduleEventCard({
         const rect = cardRef.current.getBoundingClientRect()
         const spaceRight = window.innerWidth - rect.right
         const spaceLeft = rect.left
-        const spaceTop = rect.top
         const spaceBottom = window.innerHeight - rect.bottom
 
         // Determine best position for tooltip

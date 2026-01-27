@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react'
+import React, { useCallback, useMemo, useRef } from 'react'
 import { useAtomValue, useSetAtom } from 'jotai'
 import {
   schedulesAtom,
@@ -13,6 +13,11 @@ import ScheduleEventCard from './ScheduleEventCard'
 import QuickAddPopover from './QuickAddPopover'
 import {
   HOURS,
+  HOUR_HEIGHT,
+  HALF_HOUR_HEIGHT,
+  yToTime,
+  timeToY,
+  clampHours,
   getWeekDates,
   getCustomDateRange,
   getEventsForDay,
@@ -22,27 +27,11 @@ import {
   createDateWithTime,
   getCurrentTimePosition
 } from './scheduleUtils'
+import { useScheduleGrid, type TimeRangeWithIndex, type DropTargetWithIndex } from './useScheduleGrid'
 
 interface ScheduleWeekViewProps {
   onEventClick: (event: ScheduleEvent) => void
   onOpenAddModal: (date: Date, startTime: string, endTime: string) => void
-}
-
-const HOUR_HEIGHT = 60 // pixels per hour
-const HALF_HOUR_HEIGHT = 30 // pixels per 30 minutes
-
-// Convert Y position to time (hours and minutes)
-const yToTime = (y: number): { hours: number; minutes: number } => {
-  const totalMinutes = Math.floor(y / HALF_HOUR_HEIGHT) * 30 + HOURS[0] * 60
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-  return { hours, minutes }
-}
-
-// Convert time to Y position
-const timeToY = (hours: number, minutes: number): number => {
-  const totalMinutes = hours * 60 + minutes - HOURS[0] * 60
-  return (totalMinutes / 30) * HALF_HOUR_HEIGHT
 }
 
 function ScheduleWeekView({
@@ -66,120 +55,93 @@ function ScheduleWeekView({
 
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Quick add state
-  const [quickAdd, setQuickAdd] = useState<{
-    isOpen: boolean
-    position: { x: number; y: number }
-    date: Date
-    startTime: Date
-    endTime: Date
-  } | null>(null)
+  // Use shared grid interactions hook
+  const {
+    quickAdd,
+    setQuickAdd,
+    closeQuickAdd,
+    dragSelection,
+    setDragSelection,
+    isDragging,
+    justFinishedDragging,
+    persistedSelection,
+    setPersistedSelection,
+    draggedEvent,
+    setDraggedEvent,
+    dropTarget,
+    setDropTarget,
+    hoverCell,
+    setHoverCell,
+    handleCellLeave,
+    handleEventHoverStart,
+    handleEventDragStart,
+    handleEventDragEnd,
+    handleDragLeave
+  } = useScheduleGrid({ multiDay: true })
 
-  // Drag selection state (now using minutes for 30-min precision)
-  const [dragSelection, setDragSelection] = useState<{
-    dayIndex: number
-    startHours: number
-    startMinutes: number
-    endHours: number
-    endMinutes: number
-  } | null>(null)
-  const isDragging = useRef(false)
-  const justFinishedDragging = useRef(false)
-
-  // Keep selection visible while quick add is open
-  const [persistedSelection, setPersistedSelection] = useState<{
-    dayIndex: number
-    startHours: number
-    startMinutes: number
-    endHours: number
-    endMinutes: number
-  } | null>(null)
-
-  // Event drag state
-  const [draggedEvent, setDraggedEvent] = useState<ScheduleEvent | null>(null)
-  const [dropTarget, setDropTarget] = useState<{
-    dayIndex: number
-    hours: number
-    minutes: number
-  } | null>(null)
-
-  // Hover highlight state
-  const [hoverCell, setHoverCell] = useState<{
-    dayIndex: number
-    hours: number
-    minutes: number
-  } | null>(null)
+  // Type assertions for multi-day variants
+  const typedDragSelection = dragSelection as TimeRangeWithIndex | null
+  const typedPersistedSelection = persistedSelection as TimeRangeWithIndex | null
+  const typedDropTarget = dropTarget as DropTargetWithIndex | null
+  const typedHoverCell = hoverCell as { dayIndex?: number; hours: number; minutes: number } | null
 
   const handleCellHover = useCallback(
     (e: React.MouseEvent, dayIndex: number) => {
-      // Don't show hover when dragging selection, dragging event, or quick add is open
       if (isDragging.current || draggedEvent || quickAdd) return
 
       const rect = e.currentTarget.getBoundingClientRect()
       const y = e.clientY - rect.top
       const { hours, minutes } = yToTime(y)
-
-      // Clamp to valid range
-      const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
+      const clampedHours = clampHours(hours)
 
       setHoverCell({ dayIndex, hours: clampedHours, minutes })
     },
-    [draggedEvent, quickAdd]
+    [draggedEvent, quickAdd, setHoverCell]
   )
 
-  const handleCellLeave = useCallback(() => {
-    if (!draggedEvent) {
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent, dayIndex: number) => {
+      if (e.button !== 0) return
+
+      const rect = e.currentTarget.getBoundingClientRect()
+      const y = e.clientY - rect.top
+      const { hours, minutes } = yToTime(y)
+      const clampedHours = clampHours(hours)
+
+      isDragging.current = true
       setHoverCell(null)
-    }
-  }, [draggedEvent])
-
-  const handleEventHoverStart = useCallback(() => {
-    setHoverCell(null)
-  }, [])
-
-  const handleMouseDown = useCallback((e: React.MouseEvent, dayIndex: number) => {
-    if (e.button !== 0) return // Only left click
-
-    const rect = e.currentTarget.getBoundingClientRect()
-    const y = e.clientY - rect.top
-    const { hours, minutes } = yToTime(y)
-
-    // Clamp to valid range
-    const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
-
-    isDragging.current = true
-    setHoverCell(null) // Clear hover when starting drag selection
-    setDragSelection({
-      dayIndex,
-      startHours: clampedHours,
-      startMinutes: minutes,
-      endHours: clampedHours,
-      endMinutes: minutes + 30 >= 60 ? 0 : minutes + 30
-    })
-  }, [])
+      setDragSelection({
+        dayIndex,
+        startHours: clampedHours,
+        startMinutes: minutes,
+        endHours: clampedHours,
+        endMinutes: minutes + 30 >= 60 ? 0 : minutes + 30
+      })
+    },
+    [setHoverCell, setDragSelection]
+  )
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent, dayIndex: number) => {
-      if (!isDragging.current || !dragSelection || dragSelection.dayIndex !== dayIndex) return
+      if (!isDragging.current || !typedDragSelection || typedDragSelection.dayIndex !== dayIndex)
+        return
 
       const rect = e.currentTarget.getBoundingClientRect()
       const y = Math.max(0, Math.min(e.clientY - rect.top, HOURS.length * HOUR_HEIGHT))
       const { hours, minutes } = yToTime(y)
-
-      // Clamp to valid range
-      const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1] + 1, hours))
+      const clampedHours = Math.min(clampHours(hours), HOURS[HOURS.length - 1] + 1)
 
       setDragSelection((prev) => {
         if (!prev) return null
         return { ...prev, endHours: clampedHours, endMinutes: minutes }
       })
     },
-    [dragSelection]
+    [typedDragSelection, setDragSelection]
   )
 
   const handleMouseUp = useCallback(
     (e: React.MouseEvent) => {
-      if (!isDragging.current || !dragSelection) {
+      if (!isDragging.current || !typedDragSelection) {
         isDragging.current = false
         return
       }
@@ -187,11 +149,11 @@ function ScheduleWeekView({
       isDragging.current = false
       justFinishedDragging.current = true
 
-      const date = weekDates[dragSelection.dayIndex]
+      const date = weekDates[typedDragSelection.dayIndex]
 
       // Calculate start and end times
-      const startTotal = dragSelection.startHours * 60 + dragSelection.startMinutes
-      const endTotal = dragSelection.endHours * 60 + dragSelection.endMinutes
+      const startTotal = typedDragSelection.startHours * 60 + typedDragSelection.startMinutes
+      const endTotal = typedDragSelection.endHours * 60 + typedDragSelection.endMinutes
 
       const minTotal = Math.min(startTotal, endTotal)
       const maxTotal = Math.max(startTotal, endTotal)
@@ -204,7 +166,7 @@ function ScheduleWeekView({
 
       // Persist the selection for display while quick add is open
       setPersistedSelection({
-        dayIndex: dragSelection.dayIndex,
+        dayIndex: typedDragSelection.dayIndex,
         startHours: Math.floor(minTotal / 60),
         startMinutes: minTotal % 60,
         endHours: Math.floor(finalEndTotal / 60),
@@ -221,7 +183,7 @@ function ScheduleWeekView({
 
       setDragSelection(null)
     },
-    [dragSelection, weekDates]
+    [typedDragSelection, weekDates, setPersistedSelection, setQuickAdd, setDragSelection]
   )
 
   const handleCellClick = useCallback(
@@ -237,9 +199,7 @@ function ScheduleWeekView({
       const rect = e.currentTarget.getBoundingClientRect()
       const y = e.clientY - rect.top
       const { hours, minutes } = yToTime(y)
-
-      // Clamp to valid range
-      const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
+      const clampedHours = clampHours(hours)
 
       const date = weekDates[dayIndex]
       const startTime = createDateWithTime(date, clampedHours, minutes)
@@ -268,38 +228,23 @@ function ScheduleWeekView({
         endTime
       })
     },
-    [weekDates]
+    [weekDates, setPersistedSelection, setQuickAdd]
   )
 
-  // Event drag handlers
-  const handleEventDragStart = useCallback((event: ScheduleEvent) => {
-    setDraggedEvent(event)
-    setHoverCell(null) // Clear hover when starting event drag
-  }, [])
+  const handleDragOver = useCallback(
+    (e: React.DragEvent, dayIndex: number) => {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
 
-  const handleEventDragEnd = useCallback(() => {
-    setDraggedEvent(null)
-    setDropTarget(null)
-    setHoverCell(null) // Clear hover when ending event drag
-  }, [])
+      const rect = e.currentTarget.getBoundingClientRect()
+      const y = e.clientY - rect.top
+      const { hours, minutes } = yToTime(y)
+      const clampedHours = clampHours(hours)
 
-  const handleDragOver = useCallback((e: React.DragEvent, dayIndex: number) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-
-    const rect = e.currentTarget.getBoundingClientRect()
-    const y = e.clientY - rect.top
-    const { hours, minutes } = yToTime(y)
-
-    // Clamp to valid range
-    const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
-
-    setDropTarget({ dayIndex, hours: clampedHours, minutes })
-  }, [])
-
-  const handleDragLeave = useCallback(() => {
-    setDropTarget(null)
-  }, [])
+      setDropTarget({ dayIndex, hours: clampedHours, minutes })
+    },
+    [setDropTarget]
+  )
 
   const handleDrop = useCallback(
     async (e: React.DragEvent, dayIndex: number) => {
@@ -310,9 +255,7 @@ function ScheduleWeekView({
         const rect = e.currentTarget.getBoundingClientRect()
         const y = e.clientY - rect.top
         const { hours, minutes } = yToTime(y)
-
-        // Clamp to valid range
-        const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
+        const clampedHours = clampHours(hours)
 
         // Calculate duration of the original event
         const originalStart = new Date(eventData.startTime)
@@ -409,7 +352,7 @@ function ScheduleWeekView({
             const dayEvents = getEventsForDay(schedules, date)
             const eventGroups = groupOverlappingEvents(dayEvents)
             const today = isToday(date)
-            const isDropTarget = dropTarget?.dayIndex === dayIndex
+            const isDropTarget = typedDropTarget?.dayIndex === dayIndex
 
             return (
               <div
@@ -443,25 +386,27 @@ function ScheduleWeekView({
                 ))}
 
                 {/* Hover highlight */}
-                {hoverCell &&
-                  hoverCell.dayIndex === dayIndex &&
-                  !dragSelection &&
+                {typedHoverCell &&
+                  typedHoverCell.dayIndex === dayIndex &&
+                  !typedDragSelection &&
                   !draggedEvent && (
                     <div
                       className="absolute left-1 right-1 bg-[#1877F2]/10 rounded-md pointer-events-none z-5 transition-all duration-75"
                       style={{
-                        top: timeToY(hoverCell.hours, hoverCell.minutes),
+                        top: timeToY(typedHoverCell.hours, typedHoverCell.minutes),
                         height: HALF_HOUR_HEIGHT
                       }}
                     />
                   )}
 
                 {/* Drag selection overlay */}
-                {dragSelection &&
-                  dragSelection.dayIndex === dayIndex &&
+                {typedDragSelection &&
+                  typedDragSelection.dayIndex === dayIndex &&
                   (() => {
-                    const startTotal = dragSelection.startHours * 60 + dragSelection.startMinutes
-                    const endTotal = dragSelection.endHours * 60 + dragSelection.endMinutes
+                    const startTotal =
+                      typedDragSelection.startHours * 60 + typedDragSelection.startMinutes
+                    const endTotal =
+                      typedDragSelection.endHours * 60 + typedDragSelection.endMinutes
                     const minTotal = Math.min(startTotal, endTotal)
                     const maxTotal = Math.max(startTotal, endTotal)
                     const top = timeToY(Math.floor(minTotal / 60), minTotal % 60)
@@ -478,17 +423,17 @@ function ScheduleWeekView({
                   })()}
 
                 {/* Persisted selection overlay (shown while quick add is open) */}
-                {persistedSelection &&
-                  persistedSelection.dayIndex === dayIndex &&
-                  !dragSelection &&
+                {typedPersistedSelection &&
+                  typedPersistedSelection.dayIndex === dayIndex &&
+                  !typedDragSelection &&
                   (() => {
                     const startTotal =
-                      persistedSelection.startHours * 60 + persistedSelection.startMinutes
+                      typedPersistedSelection.startHours * 60 + typedPersistedSelection.startMinutes
                     const endTotal =
-                      persistedSelection.endHours * 60 + persistedSelection.endMinutes
+                      typedPersistedSelection.endHours * 60 + typedPersistedSelection.endMinutes
                     const top = timeToY(
-                      persistedSelection.startHours,
-                      persistedSelection.startMinutes
+                      typedPersistedSelection.startHours,
+                      typedPersistedSelection.startMinutes
                     )
                     const height = Math.max(
                       ((endTotal - startTotal) / 60) * HOUR_HEIGHT,
@@ -505,13 +450,13 @@ function ScheduleWeekView({
                 {/* Drop preview indicator */}
                 {draggedEvent &&
                   isDropTarget &&
-                  dropTarget &&
+                  typedDropTarget &&
                   (() => {
                     const originalStart = new Date(draggedEvent.startTime)
                     const originalEnd = new Date(draggedEvent.endTime)
                     const durationMs = originalEnd.getTime() - originalStart.getTime()
                     const durationMins = durationMs / (1000 * 60)
-                    const top = timeToY(dropTarget.hours, dropTarget.minutes)
+                    const top = timeToY(typedDropTarget.hours, typedDropTarget.minutes)
                     const height = (durationMins / 60) * HOUR_HEIGHT
                     return (
                       <div
@@ -573,10 +518,7 @@ function ScheduleWeekView({
       {quickAdd && (
         <QuickAddPopover
           isOpen={quickAdd.isOpen}
-          onClose={() => {
-            setQuickAdd(null)
-            setPersistedSelection(null)
-          }}
+          onClose={closeQuickAdd}
           position={quickAdd.position}
           date={quickAdd.date}
           startTime={quickAdd.startTime}

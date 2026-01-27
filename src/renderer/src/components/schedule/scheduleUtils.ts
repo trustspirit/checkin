@@ -3,6 +3,45 @@ import type { ScheduleEvent } from '../../types'
 // Get hours array for time slots (6:00 - 23:00)
 export const HOURS = Array.from({ length: 18 }, (_, i) => i + 6)
 
+// Grid layout constants
+export const HOUR_HEIGHT = 60 // pixels per hour (vertical view)
+export const HALF_HOUR_HEIGHT = 30 // pixels per 30 minutes (vertical view)
+export const HOUR_WIDTH = 100 // pixels per hour (horizontal view)
+export const ROW_HEIGHT = 80 // pixels per row (horizontal view)
+
+// Convert Y position to time (for vertical views)
+export const yToTime = (y: number): { hours: number; minutes: number } => {
+  const totalMinutes = Math.floor(y / HALF_HOUR_HEIGHT) * 30 + HOURS[0] * 60
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  return { hours, minutes }
+}
+
+// Convert time to Y position (for vertical views)
+export const timeToY = (hours: number, minutes: number): number => {
+  const totalMinutes = hours * 60 + minutes - HOURS[0] * 60
+  return (totalMinutes / 30) * HALF_HOUR_HEIGHT
+}
+
+// Convert X position to time (for horizontal views)
+export const xToTime = (x: number): { hours: number; minutes: number } => {
+  const totalMinutes = Math.floor(x / (HOUR_WIDTH / 2)) * 30 + HOURS[0] * 60
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  return { hours, minutes }
+}
+
+// Convert time to X position (for horizontal views)
+export const timeToX = (hours: number, minutes: number): number => {
+  const totalMinutes = hours * 60 + minutes - HOURS[0] * 60
+  return (totalMinutes / 30) * (HOUR_WIDTH / 2)
+}
+
+// Clamp hours to valid range
+export const clampHours = (hours: number): number => {
+  return Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
+}
+
 // Format time for display
 export const formatTime = (date: Date): string => {
   return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
