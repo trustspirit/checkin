@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAtomValue, useSetAtom } from 'jotai'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { reinitializeFirebase, resetAllData } from '../services/firebase'
 import { syncAtom } from '../stores/dataStore'
 import { addToastAtom } from '../stores/toastStore'
 import { userNameAtom, clearUserNameAtom } from '../stores/userStore'
+import {
+  eventPeriodStartAtom,
+  eventPeriodEndAtom,
+  setEventPeriodAtom,
+  clearEventPeriodAtom
+} from '../stores/scheduleStore'
 import { changeLanguage, getCurrentLanguage } from '../i18n'
 import { ConfirmDialog, SectionCard } from '../components/ui'
 
@@ -14,6 +20,10 @@ function SettingsPage(): React.ReactElement {
   const addToast = useSetAtom(addToastAtom)
   const currentUser = useAtomValue(userNameAtom)
   const clearUserName = useSetAtom(clearUserNameAtom)
+  const eventPeriodStart = useAtomValue(eventPeriodStartAtom)
+  const eventPeriodEnd = useAtomValue(eventPeriodEndAtom)
+  const setEventPeriod = useSetAtom(setEventPeriodAtom)
+  const clearEventPeriod = useSetAtom(clearEventPeriodAtom)
   const [configPath, setConfigPath] = useState<string | null>(null)
   const [isConfigured, setIsConfigured] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -21,6 +31,59 @@ function SettingsPage(): React.ReactElement {
   const [currentLang, setCurrentLang] = useState(getCurrentLanguage())
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
+
+  // Event period form state
+  const [eventStartInput, setEventStartInput] = useState('')
+  const [eventEndInput, setEventEndInput] = useState('')
+
+  // Initialize event period inputs from stored values
+  useEffect(() => {
+    if (eventPeriodStart) {
+      setEventStartInput(formatDateForInput(eventPeriodStart))
+    }
+    if (eventPeriodEnd) {
+      setEventEndInput(formatDateForInput(eventPeriodEnd))
+    }
+  }, [eventPeriodStart, eventPeriodEnd])
+
+  // Format date for input (use local date to avoid timezone issues)
+  const formatDateForInput = (date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  // Parse date string to local date
+  const parseDateFromInput = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split('-').map(Number)
+    return new Date(year, month - 1, day)
+  }
+
+  const handleSaveEventPeriod = () => {
+    if (!eventStartInput || !eventEndInput) {
+      addToast({ type: 'error', message: t('settings.eventPeriodRequired') })
+      return
+    }
+
+    const startDate = parseDateFromInput(eventStartInput)
+    const endDate = parseDateFromInput(eventEndInput)
+
+    if (startDate > endDate) {
+      addToast({ type: 'error', message: t('settings.eventPeriodInvalid') })
+      return
+    }
+
+    setEventPeriod({ startDate, endDate })
+    addToast({ type: 'success', message: t('settings.eventPeriodSaved') })
+  }
+
+  const handleClearEventPeriod = () => {
+    clearEventPeriod()
+    setEventStartInput('')
+    setEventEndInput('')
+    addToast({ type: 'success', message: t('settings.eventPeriodCleared') })
+  }
 
   useEffect(() => {
     loadCurrentConfig()
@@ -175,6 +238,74 @@ function SettingsPage(): React.ReactElement {
           >
             🇺🇸 {t('settings.english')}
           </button>
+        </div>
+      </SectionCard>
+
+      {/* Event Period Settings */}
+      <SectionCard title={t('settings.eventPeriod')} description={t('settings.eventPeriodDesc')}>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[#65676B] mb-1">
+                {t('settings.eventStartDate')}
+              </label>
+              <input
+                type="date"
+                value={eventStartInput}
+                onChange={(e) => setEventStartInput(e.target.value)}
+                className="w-full px-3 py-2 border border-[#DADDE1] rounded-lg text-sm focus:outline-none focus:border-[#1877F2]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#65676B] mb-1">
+                {t('settings.eventEndDate')}
+              </label>
+              <input
+                type="date"
+                value={eventEndInput}
+                onChange={(e) => setEventEndInput(e.target.value)}
+                className="w-full px-3 py-2 border border-[#DADDE1] rounded-lg text-sm focus:outline-none focus:border-[#1877F2]"
+              />
+            </div>
+          </div>
+
+          {eventPeriodStart && eventPeriodEnd && (
+            <div className="p-3 bg-[#E7F3FF] border border-[#1877F2]/30 rounded-lg">
+              <div className="flex items-center gap-2 text-sm text-[#1877F2]">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                <span>
+                  {t('settings.currentEventPeriod')}:{' '}
+                  <strong>
+                    {eventPeriodStart.toLocaleDateString()} - {eventPeriodEnd.toLocaleDateString()}
+                  </strong>
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={handleSaveEventPeriod}
+              className="px-4 py-2 bg-[#1877F2] text-white rounded-md font-semibold hover:bg-[#166FE5] transition-colors"
+            >
+              {t('common.save')}
+            </button>
+            {eventPeriodStart && eventPeriodEnd && (
+              <button
+                onClick={handleClearEventPeriod}
+                className="px-4 py-2 bg-[#E4E6EB] text-[#050505] rounded-md font-semibold hover:bg-[#D8DADF] transition-colors"
+              >
+                {t('common.clear')}
+              </button>
+            )}
+          </div>
         </div>
       </SectionCard>
 

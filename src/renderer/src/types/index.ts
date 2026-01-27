@@ -109,3 +109,21 @@ export interface BusRoute {
   createdAt: Date
   updatedAt: Date
 }
+
+// Schedule/Event for schedule management
+export type ScheduleViewMode = 'week' | 'day' | 'custom'
+export type ScheduleViewOrientation = 'vertical' | 'horizontal'
+
+export interface ScheduleEvent {
+  id: string
+  title: string
+  description?: string
+  startTime: Date // Full datetime
+  endTime: Date // Full datetime
+  color?: string // Custom color (hex)
+  colorIndex?: number // Auto-assigned color index
+  location?: string
+  allDay?: boolean
+  createdAt: Date
+  updatedAt: Date
+}

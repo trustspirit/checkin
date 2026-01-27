@@ -6,7 +6,8 @@ export {
   convertTimestamp,
   PARTICIPANTS_COLLECTION,
   GROUPS_COLLECTION,
-  ROOMS_COLLECTION
+  ROOMS_COLLECTION,
+  SCHEDULES_COLLECTION
 } from './config'
 export type { FirebaseConfig } from './config'
 
@@ -92,3 +93,15 @@ export {
   BUSES_COLLECTION
 } from './buses'
 export type { CreateBusRouteOptions, UpdateBusRouteData } from './buses'
+
+// Schedule Services
+export {
+  getAllSchedules,
+  getSchedulesByDateRange,
+  getScheduleById,
+  createSchedule,
+  updateSchedule,
+  deleteSchedule,
+  subscribeToSchedules
+} from './schedules'
+export type { CreateScheduleData, UpdateScheduleData } from './schedules'

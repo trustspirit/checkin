@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useCallback } from 'react'
 
 interface ModalProps {
   isOpen: boolean
@@ -22,6 +22,25 @@ function Modal({
   children,
   maxWidth = 'lg'
 }: ModalProps): React.ReactElement | null {
+  // Handle ESC key to close modal
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    },
+    [onClose]
+  )
+
+  useEffect(() => {
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown)
+    }
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen, handleKeyDown])
+
   if (!isOpen) return null
 
   return (

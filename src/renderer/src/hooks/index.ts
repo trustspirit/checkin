@@ -1,6 +1,7 @@
 export { useStatistics } from './useStatistics'
 export type { Statistics } from './useStatistics'
 export { useExportPDF } from './useExportPDF'
+export { useExportFullPDF } from './useExportFullPDF'
 
 // Batched Infinite Scroll with Realtime
 export { useBatchedInfiniteScrollWithRealtime } from './useBatchedInfiniteScrollWithRealtime'

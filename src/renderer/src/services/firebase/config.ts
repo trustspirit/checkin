@@ -68,6 +68,7 @@ export const PARTICIPANTS_COLLECTION = 'participants'
 export const GROUPS_COLLECTION = 'groups'
 export const ROOMS_COLLECTION = 'rooms'
 export const USERS_COLLECTION = 'users'
+export const SCHEDULES_COLLECTION = 'schedules'
 
 // Helper to convert Firestore timestamps
 export const convertTimestamp = (timestamp: Timestamp | Date | undefined): Date => {
