@@ -191,19 +191,12 @@ function RoomDetailPage(): React.ReactElement {
         leaderName: isRemoving ? null : participantName
       })
 
-      await writeAuditLog(
-        userName || 'Unknown',
-        'update',
-        'room',
-        id,
-        `Room ${room.roomNumber}`,
-        {
-          leader: {
-            from: room.leaderName || null,
-            to: isRemoving ? null : participantName
-          }
+      await writeAuditLog(userName || 'Unknown', 'update', 'room', id, `Room ${room.roomNumber}`, {
+        leader: {
+          from: room.leaderName || null,
+          to: isRemoving ? null : participantName
         }
-      )
+      })
 
       await sync()
       setLeaderConfirm({ open: false, participantId: '', participantName: '', isRemoving: false })
@@ -490,68 +483,68 @@ function RoomDetailPage(): React.ReactElement {
                     </div>
 
                     <div className="flex items-center gap-2">
-                    <div className="relative">
-                      <button
-                        onClick={() =>
-                          setMovingParticipantId(
-                            movingParticipantId === participant.id ? null : participant.id
-                          )
-                        }
-                        className="px-3 py-1.5 bg-white border border-[#DADDE1] text-[#1877F2] text-sm font-semibold rounded hover:bg-gray-50 transition-colors"
-                      >
-                        {t('common.move')}
-                      </button>
+                      <div className="relative">
+                        <button
+                          onClick={() =>
+                            setMovingParticipantId(
+                              movingParticipantId === participant.id ? null : participant.id
+                            )
+                          }
+                          className="px-3 py-1.5 bg-white border border-[#DADDE1] text-[#1877F2] text-sm font-semibold rounded hover:bg-gray-50 transition-colors"
+                        >
+                          {t('common.move')}
+                        </button>
 
-                      {movingParticipantId === participant.id && (
-                        <div className="absolute right-0 mt-2 w-64 bg-white border border-[#DADDE1] rounded-lg shadow-xl py-2 z-20 max-h-64 overflow-y-auto">
-                          <div className="px-3 py-2 border-b border-[#DADDE1] text-xs font-bold text-[#65676B] uppercase tracking-wide sticky top-0 bg-white">
-                            {t('participant.selectRoom')}
-                          </div>
-                          {rooms
-                            .filter((r) => r.id !== room.id)
-                            .map((targetRoom) => {
-                              const isFull = targetRoom.currentOccupancy >= targetRoom.maxCapacity
-                              return (
-                                <button
-                                  key={targetRoom.id}
-                                  onClick={() =>
-                                    !isFull &&
-                                    handleMoveParticipant(
-                                      participant.id,
-                                      participant.name,
-                                      targetRoom
-                                    )
-                                  }
-                                  disabled={isFull}
-                                  className={`w-full text-left px-4 py-2 flex justify-between items-center ${
-                                    isFull
-                                      ? 'opacity-50 cursor-not-allowed bg-gray-50'
-                                      : 'hover:bg-[#F0F2F5] cursor-pointer'
-                                  }`}
-                                >
-                                  <span className="font-medium text-[#050505]">
-                                    {t('participant.room')} {targetRoom.roomNumber}
-                                  </span>
-                                  <span
-                                    className={`text-xs px-2 py-0.5 rounded ${
+                        {movingParticipantId === participant.id && (
+                          <div className="absolute right-0 mt-2 w-64 bg-white border border-[#DADDE1] rounded-lg shadow-xl py-2 z-20 max-h-64 overflow-y-auto">
+                            <div className="px-3 py-2 border-b border-[#DADDE1] text-xs font-bold text-[#65676B] uppercase tracking-wide sticky top-0 bg-white">
+                              {t('participant.selectRoom')}
+                            </div>
+                            {rooms
+                              .filter((r) => r.id !== room.id)
+                              .map((targetRoom) => {
+                                const isFull = targetRoom.currentOccupancy >= targetRoom.maxCapacity
+                                return (
+                                  <button
+                                    key={targetRoom.id}
+                                    onClick={() =>
+                                      !isFull &&
+                                      handleMoveParticipant(
+                                        participant.id,
+                                        participant.name,
+                                        targetRoom
+                                      )
+                                    }
+                                    disabled={isFull}
+                                    className={`w-full text-left px-4 py-2 flex justify-between items-center ${
                                       isFull
-                                        ? 'bg-[#FFEBEE] text-[#FA383E]'
-                                        : 'bg-[#EFFFF6] text-[#31A24C]'
+                                        ? 'opacity-50 cursor-not-allowed bg-gray-50'
+                                        : 'hover:bg-[#F0F2F5] cursor-pointer'
                                     }`}
                                   >
-                                    {targetRoom.currentOccupancy}/{targetRoom.maxCapacity}
-                                  </span>
-                                </button>
-                              )
-                            })}
-                          {rooms.length <= 1 && (
-                            <div className="px-4 py-3 text-sm text-[#65676B] text-center">
-                              {t('room.noOtherRooms')}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                                    <span className="font-medium text-[#050505]">
+                                      {t('participant.room')} {targetRoom.roomNumber}
+                                    </span>
+                                    <span
+                                      className={`text-xs px-2 py-0.5 rounded ${
+                                        isFull
+                                          ? 'bg-[#FFEBEE] text-[#FA383E]'
+                                          : 'bg-[#EFFFF6] text-[#31A24C]'
+                                      }`}
+                                    >
+                                      {targetRoom.currentOccupancy}/{targetRoom.maxCapacity}
+                                    </span>
+                                  </button>
+                                )
+                              })}
+                            {rooms.length <= 1 && (
+                              <div className="px-4 py-3 text-sm text-[#65676B] text-center">
+                                {t('room.noOtherRooms')}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
 
                       <button
                         onClick={() =>
@@ -600,7 +593,12 @@ function RoomDetailPage(): React.ReactElement {
       <ConfirmDialog
         isOpen={leaderConfirm.open}
         onClose={() =>
-          setLeaderConfirm({ open: false, participantId: '', participantName: '', isRemoving: false })
+          setLeaderConfirm({
+            open: false,
+            participantId: '',
+            participantName: '',
+            isRemoving: false
+          })
         }
         onConfirm={handleSetLeader}
         title={leaderConfirm.isRemoving ? t('room.removeLeader') : t('room.setLeader')}

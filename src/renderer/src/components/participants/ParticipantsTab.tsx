@@ -216,7 +216,9 @@ export function ParticipantsTab() {
               >
                 <td className="px-4 py-3 font-semibold text-[#050505]">{participant.name}</td>
                 <td className="px-4 py-3 text-[#65676B]">{participant.email}</td>
-                <td className="px-4 py-3 text-[#65676B]">{participant.phoneNumber ? formatPhoneNumber(participant.phoneNumber) : '-'}</td>
+                <td className="px-4 py-3 text-[#65676B]">
+                  {participant.phoneNumber ? formatPhoneNumber(participant.phoneNumber) : '-'}
+                </td>
                 <td className="px-4 py-3 text-[#65676B]">{participant.ward || '-'}</td>
                 <td className="px-4 py-3">
                   {participant.groupName ? (

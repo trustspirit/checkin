@@ -17,7 +17,9 @@ function PrintableRoomAssignment({
   const { t } = useTranslation()
 
   const getRoomParticipants = (roomId: string) => {
-    return participants.filter((p) => p.roomId === roomId).sort((a, b) => a.name.localeCompare(b.name))
+    return participants
+      .filter((p) => p.roomId === roomId)
+      .sort((a, b) => a.name.localeCompare(b.name))
   }
 
   const handlePrint = () => {
@@ -27,7 +29,9 @@ function PrintableRoomAssignment({
       return
     }
 
-    const sortedRooms = [...rooms].sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }))
+    const sortedRooms = [...rooms].sort((a, b) =>
+      a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true })
+    )
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -131,7 +135,7 @@ function PrintableRoomAssignment({
             </div>
             <div class="summary-item">
               <div class="label">${t('print.totalAssigned')}</div>
-              <div class="value">${participants.filter(p => p.roomId).length}</div>
+              <div class="value">${participants.filter((p) => p.roomId).length}</div>
             </div>
             <div class="summary-item">
               <div class="label">${t('print.totalCapacity')}</div>
@@ -139,23 +143,32 @@ function PrintableRoomAssignment({
             </div>
           </div>
           <div class="rooms-grid">
-            ${sortedRooms.map(room => {
-              const roomParticipants = getRoomParticipants(room.id)
-              return `
+            ${sortedRooms
+              .map((room) => {
+                const roomParticipants = getRoomParticipants(room.id)
+                return `
                 <div class="room-card">
                   <div class="room-header">
                     <h3>${t('participant.room')} ${room.roomNumber}</h3>
                     <span class="occupancy">${room.currentOccupancy}/${room.maxCapacity}</span>
                   </div>
-                  ${(room.genderType || room.roomType) ? `
+                  ${
+                    room.genderType || room.roomType
+                      ? `
                     <div class="room-meta">
                       ${room.genderType ? `<span>${room.genderType === 'male' ? t('room.genderMale') : room.genderType === 'female' ? t('room.genderFemale') : t('room.genderMixed')}</span>` : ''}
                       ${room.roomType && room.roomType !== 'general' ? `<span>${room.roomType === 'guest' ? t('room.typeGuest') : t('room.typeLeadership')}</span>` : ''}
                     </div>
-                  ` : ''}
-                  ${roomParticipants.length > 0 ? `
+                  `
+                      : ''
+                  }
+                  ${
+                    roomParticipants.length > 0
+                      ? `
                     <div class="participant-list">
-                      ${roomParticipants.map((p, idx) => `
+                      ${roomParticipants
+                        .map(
+                          (p, idx) => `
                         <div class="participant-item">
                           <div>
                             <span class="participant-name">${idx + 1}. ${p.name}</span>
@@ -165,14 +178,19 @@ function PrintableRoomAssignment({
                             ${p.ward || ''}${p.phoneNumber ? ` · ${formatPhoneNumber(p.phoneNumber)}` : ''}
                           </div>
                         </div>
-                      `).join('')}
+                      `
+                        )
+                        .join('')}
                     </div>
-                  ` : `
+                  `
+                      : `
                     <div class="empty-room">${t('room.roomEmpty')}</div>
-                  `}
+                  `
+                  }
                 </div>
               `
-            }).join('')}
+              })
+              .join('')}
           </div>
         </body>
       </html>

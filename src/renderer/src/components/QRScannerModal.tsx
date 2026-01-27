@@ -73,9 +73,7 @@ function QRScannerModal({
       setIsScanning(true)
     } catch (err) {
       console.error('Failed to start scanner:', err)
-      setCameraError(
-        err instanceof Error ? err.message : t('qr.cameraError')
-      )
+      setCameraError(err instanceof Error ? err.message : t('qr.cameraError'))
     }
   }
 
@@ -260,7 +258,10 @@ function QRScannerModal({
   const playSound = (type: 'success' | 'checkin' | 'checkout' | 'error') => {
     // Create audio context for sound effects
     try {
-      const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+      const audioContext = new (
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      )()
       const oscillator = audioContext.createOscillator()
       const gainNode = audioContext.createGain()
 
@@ -345,8 +346,18 @@ function QRScannerModal({
             }}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#F0F2F5] transition-colors"
           >
-            <svg className="w-5 h-5 text-[#65676B]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-5 h-5 text-[#65676B]"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -411,9 +422,7 @@ function QRScannerModal({
               )}
 
               {/* Instructions */}
-              <p className="text-center text-sm text-[#65676B] mt-4">
-                {t('qr.scanInstructions')}
-              </p>
+              <p className="text-center text-sm text-[#65676B] mt-4">{t('qr.scanInstructions')}</p>
             </>
           ) : (
             /* Scanned Participant Info */
@@ -447,9 +456,7 @@ function QRScannerModal({
               <h3 className="text-xl font-bold text-[#050505] mb-1">
                 {scannedParticipant.participant.name}
               </h3>
-              <p className="text-sm text-[#65676B] mb-4">
-                {scannedParticipant.participant.email}
-              </p>
+              <p className="text-sm text-[#65676B] mb-4">{scannedParticipant.participant.email}</p>
 
               {/* Participant details */}
               <div className="bg-[#F0F2F5] rounded-lg p-4 mb-4 text-left">

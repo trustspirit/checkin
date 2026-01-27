@@ -1,4 +1,11 @@
-import React, { useState, useRef, useEffect, useCallback, cloneElement, isValidElement } from 'react'
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  cloneElement,
+  isValidElement
+} from 'react'
 import { createPortal } from 'react-dom'
 
 interface HoverCardProps {
@@ -132,18 +139,21 @@ function HoverCard({
         onMouseEnter: (e: React.MouseEvent) => {
           handleMouseEnter(e)
           // Call original handler if exists
-          const originalHandler = (children.props as Record<string, unknown>)
-            .onMouseEnter as React.MouseEventHandler | undefined
+          const originalHandler = (children.props as Record<string, unknown>).onMouseEnter as
+            | React.MouseEventHandler
+            | undefined
           if (originalHandler) originalHandler(e)
         },
         onMouseLeave: (e: React.MouseEvent) => {
           handleMouseLeave()
           // Call original handler if exists
-          const originalHandler = (children.props as Record<string, unknown>)
-            .onMouseLeave as React.MouseEventHandler | undefined
+          const originalHandler = (children.props as Record<string, unknown>).onMouseLeave as
+            | React.MouseEventHandler
+            | undefined
           if (originalHandler) originalHandler(e)
         },
-        className: `${(children.props as Record<string, unknown>).className || ''} ${className}`.trim()
+        className:
+          `${(children.props as Record<string, unknown>).className || ''} ${className}`.trim()
       } as React.HTMLAttributes<HTMLElement>)
     : children
 

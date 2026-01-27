@@ -184,3 +184,22 @@ export const formatWeekRange = (date: Date): string => {
   }
   return `${year}년 ${startMonth} ${start.getDate()}일 - ${endMonth} ${end.getDate()}일`
 }
+
+// Format date for HTML date input (YYYY-MM-DD format, local timezone)
+export const formatDateForInput = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// Parse date string from HTML date input (avoids UTC conversion)
+export const parseDateFromInput = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+// Calculate days between two dates (inclusive)
+export const calculateDaysBetween = (startDate: Date, endDate: Date): number => {
+  return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+}

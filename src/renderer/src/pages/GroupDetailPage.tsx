@@ -179,19 +179,12 @@ function GroupDetailPage(): React.ReactElement {
         leaderName: isRemoving ? null : participantName
       })
 
-      await writeAuditLog(
-        userName || 'Unknown',
-        'update',
-        'group',
-        id,
-        group.name,
-        {
-          leader: {
-            from: group.leaderName || null,
-            to: isRemoving ? null : participantName
-          }
+      await writeAuditLog(userName || 'Unknown', 'update', 'group', id, group.name, {
+        leader: {
+          from: group.leaderName || null,
+          to: isRemoving ? null : participantName
         }
-      )
+      })
 
       await sync()
       setLeaderConfirm({ open: false, participantId: '', participantName: '', isRemoving: false })
@@ -494,53 +487,53 @@ function GroupDetailPage(): React.ReactElement {
                     </div>
 
                     <div className="flex items-center gap-2">
-                    <div className="relative">
-                      <button
-                        onClick={() =>
-                          setMovingParticipantId(
-                            movingParticipantId === participant.id ? null : participant.id
-                          )
-                        }
-                        className="px-3 py-1.5 bg-white border border-[#DADDE1] text-[#1877F2] text-sm font-semibold rounded hover:bg-gray-50 transition-colors"
-                      >
-                        {t('common.move')}
-                      </button>
+                      <div className="relative">
+                        <button
+                          onClick={() =>
+                            setMovingParticipantId(
+                              movingParticipantId === participant.id ? null : participant.id
+                            )
+                          }
+                          className="px-3 py-1.5 bg-white border border-[#DADDE1] text-[#1877F2] text-sm font-semibold rounded hover:bg-gray-50 transition-colors"
+                        >
+                          {t('common.move')}
+                        </button>
 
-                      {movingParticipantId === participant.id && (
-                        <div className="absolute right-0 mt-2 w-64 bg-white border border-[#DADDE1] rounded-lg shadow-xl py-2 z-20 max-h-64 overflow-y-auto">
-                          <div className="px-3 py-2 border-b border-[#DADDE1] text-xs font-bold text-[#65676B] uppercase tracking-wide sticky top-0 bg-white">
-                            {t('participant.selectGroup')}
-                          </div>
-                          {groups
-                            .filter((g) => g.id !== group.id)
-                            .map((targetGroup) => (
-                              <button
-                                key={targetGroup.id}
-                                onClick={() =>
-                                  handleMoveParticipant(
-                                    participant.id,
-                                    participant.name,
-                                    targetGroup
-                                  )
-                                }
-                                className="w-full text-left px-4 py-2 flex justify-between items-center hover:bg-[#F0F2F5] cursor-pointer"
-                              >
-                                <span className="font-medium text-[#050505]">
-                                  {targetGroup.name}
-                                </span>
-                                <span className="text-xs px-2 py-0.5 rounded bg-[#F0F2F5] text-[#65676B]">
-                                  {targetGroup.participantCount} {t('common.members')}
-                                </span>
-                              </button>
-                            ))}
-                          {groups.length <= 1 && (
-                            <div className="px-4 py-3 text-sm text-[#65676B] text-center">
-                              {t('group.noOtherGroups')}
+                        {movingParticipantId === participant.id && (
+                          <div className="absolute right-0 mt-2 w-64 bg-white border border-[#DADDE1] rounded-lg shadow-xl py-2 z-20 max-h-64 overflow-y-auto">
+                            <div className="px-3 py-2 border-b border-[#DADDE1] text-xs font-bold text-[#65676B] uppercase tracking-wide sticky top-0 bg-white">
+                              {t('participant.selectGroup')}
                             </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                            {groups
+                              .filter((g) => g.id !== group.id)
+                              .map((targetGroup) => (
+                                <button
+                                  key={targetGroup.id}
+                                  onClick={() =>
+                                    handleMoveParticipant(
+                                      participant.id,
+                                      participant.name,
+                                      targetGroup
+                                    )
+                                  }
+                                  className="w-full text-left px-4 py-2 flex justify-between items-center hover:bg-[#F0F2F5] cursor-pointer"
+                                >
+                                  <span className="font-medium text-[#050505]">
+                                    {targetGroup.name}
+                                  </span>
+                                  <span className="text-xs px-2 py-0.5 rounded bg-[#F0F2F5] text-[#65676B]">
+                                    {targetGroup.participantCount} {t('common.members')}
+                                  </span>
+                                </button>
+                              ))}
+                            {groups.length <= 1 && (
+                              <div className="px-4 py-3 text-sm text-[#65676B] text-center">
+                                {t('group.noOtherGroups')}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
 
                       <button
                         onClick={() =>
@@ -589,7 +582,12 @@ function GroupDetailPage(): React.ReactElement {
       <ConfirmDialog
         isOpen={leaderConfirm.open}
         onClose={() =>
-          setLeaderConfirm({ open: false, participantId: '', participantName: '', isRemoving: false })
+          setLeaderConfirm({
+            open: false,
+            participantId: '',
+            participantName: '',
+            isRemoving: false
+          })
         }
         onConfirm={handleSetLeader}
         title={leaderConfirm.isRemoving ? t('group.removeLeader') : t('group.setLeader')}

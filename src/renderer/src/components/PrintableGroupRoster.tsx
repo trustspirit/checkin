@@ -17,7 +17,9 @@ function PrintableGroupRoster({
   const { t } = useTranslation()
 
   const getGroupParticipants = (groupId: string) => {
-    return participants.filter((p) => p.groupId === groupId).sort((a, b) => a.name.localeCompare(b.name))
+    return participants
+      .filter((p) => p.groupId === groupId)
+      .sort((a, b) => a.name.localeCompare(b.name))
   }
 
   const handlePrint = () => {
@@ -154,23 +156,30 @@ function PrintableGroupRoster({
             </div>
             <div class="summary-item">
               <div class="label">${t('print.totalMembers')}</div>
-              <div class="value">${participants.filter(p => p.groupId).length}</div>
+              <div class="value">${participants.filter((p) => p.groupId).length}</div>
             </div>
           </div>
-          ${sortedGroups.map(group => {
-            const groupParticipants = getGroupParticipants(group.id)
-            return `
+          ${sortedGroups
+            .map((group) => {
+              const groupParticipants = getGroupParticipants(group.id)
+              return `
               <div class="group-section">
                 <div class="group-header">
                   <h2>${group.name}</h2>
                   <span class="count">${groupParticipants.length}${group.expectedCapacity ? ` / ${group.expectedCapacity}` : ''} ${t('common.members')}</span>
                 </div>
-                ${group.tags && group.tags.length > 0 ? `
+                ${
+                  group.tags && group.tags.length > 0
+                    ? `
                   <div class="group-tags">
-                    ${group.tags.map(tag => `<span>${tag === 'male' ? t('group.tagMale') : tag === 'female' ? t('group.tagFemale') : tag}</span>`).join('')}
+                    ${group.tags.map((tag) => `<span>${tag === 'male' ? t('group.tagMale') : tag === 'female' ? t('group.tagFemale') : tag}</span>`).join('')}
                   </div>
-                ` : ''}
-                ${groupParticipants.length > 0 ? `
+                `
+                    : ''
+                }
+                ${
+                  groupParticipants.length > 0
+                    ? `
                   <table>
                     <thead>
                       <tr>
@@ -183,9 +192,10 @@ function PrintableGroupRoster({
                       </tr>
                     </thead>
                     <tbody>
-                      ${groupParticipants.map((p, idx) => {
-                        const isCheckedIn = p.checkIns.some(ci => !ci.checkOutTime)
-                        return `
+                      ${groupParticipants
+                        .map((p, idx) => {
+                          const isCheckedIn = p.checkIns.some((ci) => !ci.checkOutTime)
+                          return `
                           <tr>
                             <td>${idx + 1}</td>
                             <td class="name">${p.name}</td>
@@ -198,15 +208,19 @@ function PrintableGroupRoster({
                             </td>
                           </tr>
                         `
-                      }).join('')}
+                        })
+                        .join('')}
                     </tbody>
                   </table>
-                ` : `
+                `
+                    : `
                   <div class="empty-group">${t('group.noMembers')}</div>
-                `}
+                `
+                }
               </div>
             `
-          }).join('')}
+            })
+            .join('')}
         </body>
       </html>
     `)

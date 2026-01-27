@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai'
 import { reinitializeFirebase, resetAllData } from '../services/firebase'
 import { syncAtom } from '../stores/dataStore'
 import { addToastAtom } from '../stores/toastStore'

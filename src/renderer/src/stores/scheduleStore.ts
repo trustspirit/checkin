@@ -205,7 +205,8 @@ export const goToPreviousPeriodAtom = atom(null, (get, set) => {
   if (viewMode === 'custom') {
     const startDate = get(customStartDateAtom)
     const endDate = get(customEndDateAtom)
-    const rangeDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    const rangeDays =
+      Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
 
     const newStartDate = new Date(startDate)
     newStartDate.setDate(newStartDate.getDate() - rangeDays)
@@ -235,7 +236,8 @@ export const goToNextPeriodAtom = atom(null, (get, set) => {
   if (viewMode === 'custom') {
     const startDate = get(customStartDateAtom)
     const endDate = get(customEndDateAtom)
-    const rangeDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    const rangeDays =
+      Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
 
     const newStartDate = new Date(startDate)
     newStartDate.setDate(newStartDate.getDate() + rangeDays)
@@ -258,15 +260,7 @@ export const goToNextPeriodAtom = atom(null, (get, set) => {
   }
 })
 
-// Go to today
-export const goToTodayAtom = atom(null, (get, set) => {
-  const viewMode = get(scheduleViewModeAtom)
-
-  if (viewMode === 'custom') {
-    // In custom view mode - just set selected date to today (keep current date range)
-    set(selectedDateAtom, new Date())
-  } else {
-    // In week/day view mode - go to today
-    set(selectedDateAtom, new Date())
-  }
+// Go to today - sets selected date to today in any view mode
+export const goToTodayAtom = atom(null, (_get, set) => {
+  set(selectedDateAtom, new Date())
 })

@@ -14,7 +14,13 @@ import {
   goToNextPeriodAtom,
   goToTodayAtom
 } from '../../stores/scheduleStore'
-import { formatWeekRange, formatDate } from './scheduleUtils'
+import {
+  formatWeekRange,
+  formatDate,
+  formatDateForInput,
+  parseDateFromInput,
+  calculateDaysBetween
+} from './scheduleUtils'
 
 interface ScheduleHeaderProps {
   onAddClick: () => void
@@ -63,7 +69,6 @@ function ScheduleHeader({
       }
       // For date picker, check if date inputs are focused (user is using native calendar)
       if (datePickerRef.current && !datePickerRef.current.contains(e.target as Node)) {
-        // Don't close if a date input inside the picker is focused (native calendar is open)
         const focusedElement = document.activeElement as HTMLElement
         const isDateInputFocused =
           focusedElement?.tagName === 'INPUT' &&
@@ -79,23 +84,7 @@ function ScheduleHeader({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Format date for input (use local date to avoid timezone issues)
-  const formatDateForInput = (date: Date): string => {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
-
-  // Parse date string to local date (avoid UTC conversion)
-  const parseDateFromInput = (dateStr: string): Date => {
-    const [year, month, day] = dateStr.split('-').map(Number)
-    return new Date(year, month - 1, day)
-  }
-
-  // Calculate days count for custom range
-  const customDaysCount =
-    Math.ceil((customEndDate.getTime() - customStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+  const customDaysCount = calculateDaysBetween(customStartDate, customEndDate)
 
   // Format custom date range display
   const formatCustomRange = (): string => {

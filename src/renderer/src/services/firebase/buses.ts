@@ -144,8 +144,10 @@ export async function updateBusRoute(id: string, data: UpdateBusRouteData): Prom
 
   if (data.name !== undefined) updateData.name = data.name
   if (data.region !== undefined) updateData.region = data.region
-  if (data.departureLocation !== undefined) updateData.departureLocation = data.departureLocation || null
-  if (data.estimatedArrivalTime !== undefined) updateData.estimatedArrivalTime = data.estimatedArrivalTime || null
+  if (data.departureLocation !== undefined)
+    updateData.departureLocation = data.departureLocation || null
+  if (data.estimatedArrivalTime !== undefined)
+    updateData.estimatedArrivalTime = data.estimatedArrivalTime || null
   if (data.contactName !== undefined) updateData.contactName = data.contactName || null
   if (data.contactPhone !== undefined) updateData.contactPhone = data.contactPhone || null
   if (data.notes !== undefined) updateData.notes = data.notes || null

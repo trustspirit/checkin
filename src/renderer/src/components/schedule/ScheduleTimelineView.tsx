@@ -101,21 +101,28 @@ function ScheduleTimelineView({
   } | null>(null)
 
   // Hover highlight state
-  const [hoverCell, setHoverCell] = useState<{ rowIndex: number; hours: number; minutes: number } | null>(null)
+  const [hoverCell, setHoverCell] = useState<{
+    rowIndex: number
+    hours: number
+    minutes: number
+  } | null>(null)
 
-  const handleCellHover = useCallback((e: React.MouseEvent, rowIndex: number) => {
-    // Don't show hover when dragging selection, dragging event, or quick add is open
-    if (isDragging.current || draggedEvent || quickAdd) return
+  const handleCellHover = useCallback(
+    (e: React.MouseEvent, rowIndex: number) => {
+      // Don't show hover when dragging selection, dragging event, or quick add is open
+      if (isDragging.current || draggedEvent || quickAdd) return
 
-    const rect = e.currentTarget.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const { hours, minutes } = xToTime(x)
+      const rect = e.currentTarget.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const { hours, minutes } = xToTime(x)
 
-    // Clamp to valid range
-    const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
+      // Clamp to valid range
+      const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
 
-    setHoverCell({ rowIndex, hours: clampedHours, minutes })
-  }, [draggedEvent, quickAdd])
+      setHoverCell({ rowIndex, hours: clampedHours, minutes })
+    },
+    [draggedEvent, quickAdd]
+  )
 
   const handleCellLeave = useCallback(() => {
     if (!draggedEvent) {
@@ -357,7 +364,9 @@ function ScheduleTimelineView({
               style={{ width: HOUR_WIDTH }}
             >
               <div className="flex-1 text-center py-2 border-r border-[#E4E6EB]/50 border-dashed">
-                <span className="text-xs text-[#65676B]">{hour.toString().padStart(2, '0')}:00</span>
+                <span className="text-xs text-[#65676B]">
+                  {hour.toString().padStart(2, '0')}:00
+                </span>
               </div>
               <div className="flex-1 text-center py-2">
                 <span className="text-xs text-[#8A8D91]">:30</span>
@@ -402,7 +411,9 @@ function ScheduleTimelineView({
                 style={{ minWidth: HOURS.length * HOUR_WIDTH, height: ROW_HEIGHT }}
                 onMouseDown={(e) => !draggedEvent && handleMouseDown(e, rowIndex)}
                 onMouseMove={(e) => {
-                  !draggedEvent && handleMouseMove(e, rowIndex)
+                  if (!draggedEvent) {
+                    handleMouseMove(e, rowIndex)
+                  }
                   handleCellHover(e, rowIndex)
                 }}
                 onMouseUp={(e) => !draggedEvent && handleMouseUp(e)}
@@ -427,61 +438,82 @@ function ScheduleTimelineView({
                 </div>
 
                 {/* Hover highlight */}
-                {hoverCell && hoverCell.rowIndex === rowIndex && !dragSelection && !draggedEvent && (
-                  <div
-                    className="absolute top-2 bottom-2 bg-[#1877F2]/10 rounded-md pointer-events-none z-5 transition-all duration-75"
-                    style={{
-                      left: timeToX(hoverCell.hours, hoverCell.minutes),
-                      width: HALF_HOUR_WIDTH
-                    }}
-                  />
-                )}
+                {hoverCell &&
+                  hoverCell.rowIndex === rowIndex &&
+                  !dragSelection &&
+                  !draggedEvent && (
+                    <div
+                      className="absolute top-2 bottom-2 bg-[#1877F2]/10 rounded-md pointer-events-none z-5 transition-all duration-75"
+                      style={{
+                        left: timeToX(hoverCell.hours, hoverCell.minutes),
+                        width: HALF_HOUR_WIDTH
+                      }}
+                    />
+                  )}
 
                 {/* Drag selection overlay */}
-                {dragSelection && dragSelection.rowIndex === rowIndex && (() => {
-                  const startTotal = dragSelection.startHours * 60 + dragSelection.startMinutes
-                  const endTotal = dragSelection.endHours * 60 + dragSelection.endMinutes
-                  const minTotal = Math.min(startTotal, endTotal)
-                  const maxTotal = Math.max(startTotal, endTotal)
-                  const left = timeToX(Math.floor(minTotal / 60), minTotal % 60)
-                  const width = Math.max(((maxTotal - minTotal) / 60) * HOUR_WIDTH, HALF_HOUR_WIDTH)
-                  return (
-                    <div
-                      className="absolute top-2 bottom-2 bg-[#1877F2]/20 border-2 border-[#1877F2] border-dashed rounded-lg pointer-events-none z-10"
-                      style={{ left, width }}
-                    />
-                  )
-                })()}
+                {dragSelection &&
+                  dragSelection.rowIndex === rowIndex &&
+                  (() => {
+                    const startTotal = dragSelection.startHours * 60 + dragSelection.startMinutes
+                    const endTotal = dragSelection.endHours * 60 + dragSelection.endMinutes
+                    const minTotal = Math.min(startTotal, endTotal)
+                    const maxTotal = Math.max(startTotal, endTotal)
+                    const left = timeToX(Math.floor(minTotal / 60), minTotal % 60)
+                    const width = Math.max(
+                      ((maxTotal - minTotal) / 60) * HOUR_WIDTH,
+                      HALF_HOUR_WIDTH
+                    )
+                    return (
+                      <div
+                        className="absolute top-2 bottom-2 bg-[#1877F2]/20 border-2 border-[#1877F2] border-dashed rounded-lg pointer-events-none z-10"
+                        style={{ left, width }}
+                      />
+                    )
+                  })()}
 
                 {/* Persisted selection overlay (shown while quick add is open) */}
-                {persistedSelection && persistedSelection.rowIndex === rowIndex && !dragSelection && (() => {
-                  const startTotal = persistedSelection.startHours * 60 + persistedSelection.startMinutes
-                  const endTotal = persistedSelection.endHours * 60 + persistedSelection.endMinutes
-                  const left = timeToX(persistedSelection.startHours, persistedSelection.startMinutes)
-                  const width = Math.max(((endTotal - startTotal) / 60) * HOUR_WIDTH, HALF_HOUR_WIDTH)
-                  return (
-                    <div
-                      className="absolute top-2 bottom-2 bg-[#1877F2]/20 border-2 border-[#1877F2] rounded-lg pointer-events-none z-10"
-                      style={{ left, width }}
-                    />
-                  )
-                })()}
+                {persistedSelection &&
+                  persistedSelection.rowIndex === rowIndex &&
+                  !dragSelection &&
+                  (() => {
+                    const startTotal =
+                      persistedSelection.startHours * 60 + persistedSelection.startMinutes
+                    const endTotal =
+                      persistedSelection.endHours * 60 + persistedSelection.endMinutes
+                    const left = timeToX(
+                      persistedSelection.startHours,
+                      persistedSelection.startMinutes
+                    )
+                    const width = Math.max(
+                      ((endTotal - startTotal) / 60) * HOUR_WIDTH,
+                      HALF_HOUR_WIDTH
+                    )
+                    return (
+                      <div
+                        className="absolute top-2 bottom-2 bg-[#1877F2]/20 border-2 border-[#1877F2] rounded-lg pointer-events-none z-10"
+                        style={{ left, width }}
+                      />
+                    )
+                  })()}
 
                 {/* Drop preview indicator */}
-                {draggedEvent && dropTarget?.rowIndex === rowIndex && (() => {
-                  const originalStart = new Date(draggedEvent.startTime)
-                  const originalEnd = new Date(draggedEvent.endTime)
-                  const durationMs = originalEnd.getTime() - originalStart.getTime()
-                  const durationMins = durationMs / (1000 * 60)
-                  const left = timeToX(dropTarget.hours, dropTarget.minutes)
-                  const width = (durationMins / 60) * HOUR_WIDTH
-                  return (
-                    <div
-                      className="absolute top-2 bottom-2 bg-[#1877F2]/30 border-2 border-[#1877F2] rounded-lg pointer-events-none z-10"
-                      style={{ left, width: Math.max(width, HALF_HOUR_WIDTH) }}
-                    />
-                  )
-                })()}
+                {draggedEvent &&
+                  dropTarget?.rowIndex === rowIndex &&
+                  (() => {
+                    const originalStart = new Date(draggedEvent.startTime)
+                    const originalEnd = new Date(draggedEvent.endTime)
+                    const durationMs = originalEnd.getTime() - originalStart.getTime()
+                    const durationMins = durationMs / (1000 * 60)
+                    const left = timeToX(dropTarget.hours, dropTarget.minutes)
+                    const width = (durationMins / 60) * HOUR_WIDTH
+                    return (
+                      <div
+                        className="absolute top-2 bottom-2 bg-[#1877F2]/30 border-2 border-[#1877F2] rounded-lg pointer-events-none z-10"
+                        style={{ left, width: Math.max(width, HALF_HOUR_WIDTH) }}
+                      />
+                    )
+                  })()}
 
                 {/* Events */}
                 {dayEvents.map((event) => {

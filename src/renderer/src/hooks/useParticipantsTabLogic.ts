@@ -1,9 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useBatchedInfiniteScrollWithRealtime, useParticipantFilter } from '../hooks'
-import {
-  getParticipantsPaginatedForHook,
-  subscribeToParticipants
-} from '../services/firebase'
+import { getParticipantsPaginatedForHook, subscribeToParticipants } from '../services/firebase'
 import type { Participant } from '../types'
 
 export function useParticipantsTabLogic() {

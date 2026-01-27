@@ -97,24 +97,35 @@ function ScheduleWeekView({
 
   // Event drag state
   const [draggedEvent, setDraggedEvent] = useState<ScheduleEvent | null>(null)
-  const [dropTarget, setDropTarget] = useState<{ dayIndex: number; hours: number; minutes: number } | null>(null)
+  const [dropTarget, setDropTarget] = useState<{
+    dayIndex: number
+    hours: number
+    minutes: number
+  } | null>(null)
 
   // Hover highlight state
-  const [hoverCell, setHoverCell] = useState<{ dayIndex: number; hours: number; minutes: number } | null>(null)
+  const [hoverCell, setHoverCell] = useState<{
+    dayIndex: number
+    hours: number
+    minutes: number
+  } | null>(null)
 
-  const handleCellHover = useCallback((e: React.MouseEvent, dayIndex: number) => {
-    // Don't show hover when dragging selection, dragging event, or quick add is open
-    if (isDragging.current || draggedEvent || quickAdd) return
+  const handleCellHover = useCallback(
+    (e: React.MouseEvent, dayIndex: number) => {
+      // Don't show hover when dragging selection, dragging event, or quick add is open
+      if (isDragging.current || draggedEvent || quickAdd) return
 
-    const rect = e.currentTarget.getBoundingClientRect()
-    const y = e.clientY - rect.top
-    const { hours, minutes } = yToTime(y)
+      const rect = e.currentTarget.getBoundingClientRect()
+      const y = e.clientY - rect.top
+      const { hours, minutes } = yToTime(y)
 
-    // Clamp to valid range
-    const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
+      // Clamp to valid range
+      const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
 
-    setHoverCell({ dayIndex, hours: clampedHours, minutes })
-  }, [draggedEvent, quickAdd])
+      setHoverCell({ dayIndex, hours: clampedHours, minutes })
+    },
+    [draggedEvent, quickAdd]
+  )
 
   const handleCellLeave = useCallback(() => {
     if (!draggedEvent) {
@@ -272,22 +283,19 @@ function ScheduleWeekView({
     setHoverCell(null) // Clear hover when ending event drag
   }, [])
 
-  const handleDragOver = useCallback(
-    (e: React.DragEvent, dayIndex: number) => {
-      e.preventDefault()
-      e.dataTransfer.dropEffect = 'move'
+  const handleDragOver = useCallback((e: React.DragEvent, dayIndex: number) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
 
-      const rect = e.currentTarget.getBoundingClientRect()
-      const y = e.clientY - rect.top
-      const { hours, minutes } = yToTime(y)
+    const rect = e.currentTarget.getBoundingClientRect()
+    const y = e.clientY - rect.top
+    const { hours, minutes } = yToTime(y)
 
-      // Clamp to valid range
-      const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
+    // Clamp to valid range
+    const clampedHours = Math.max(HOURS[0], Math.min(HOURS[HOURS.length - 1], hours))
 
-      setDropTarget({ dayIndex, hours: clampedHours, minutes })
-    },
-    []
-  )
+    setDropTarget({ dayIndex, hours: clampedHours, minutes })
+  }, [])
 
   const handleDragLeave = useCallback(() => {
     setDropTarget(null)
@@ -411,7 +419,9 @@ function ScheduleWeekView({
                 } ${isDropTarget && draggedEvent ? 'bg-[#E7F3FF]/50' : ''}`}
                 onMouseDown={(e) => !draggedEvent && handleMouseDown(e, dayIndex)}
                 onMouseMove={(e) => {
-                  !draggedEvent && handleMouseMove(e, dayIndex)
+                  if (!draggedEvent) {
+                    handleMouseMove(e, dayIndex)
+                  }
                   handleCellHover(e, dayIndex)
                 }}
                 onMouseUp={(e) => !draggedEvent && handleMouseUp(e)}
@@ -423,68 +433,93 @@ function ScheduleWeekView({
               >
                 {/* Hour and half-hour lines */}
                 {HOURS.map((hour) => (
-                  <div key={hour} className="h-[60px] border-b border-[#E4E6EB] last:border-b-0 relative">
+                  <div
+                    key={hour}
+                    className="h-[60px] border-b border-[#E4E6EB] last:border-b-0 relative"
+                  >
                     {/* Half-hour line */}
                     <div className="absolute left-0 right-0 top-[30px] border-b border-[#E4E6EB]/50 border-dashed" />
                   </div>
                 ))}
 
                 {/* Hover highlight */}
-                {hoverCell && hoverCell.dayIndex === dayIndex && !dragSelection && !draggedEvent && (
-                  <div
-                    className="absolute left-1 right-1 bg-[#1877F2]/10 rounded-md pointer-events-none z-5 transition-all duration-75"
-                    style={{
-                      top: timeToY(hoverCell.hours, hoverCell.minutes),
-                      height: HALF_HOUR_HEIGHT
-                    }}
-                  />
-                )}
+                {hoverCell &&
+                  hoverCell.dayIndex === dayIndex &&
+                  !dragSelection &&
+                  !draggedEvent && (
+                    <div
+                      className="absolute left-1 right-1 bg-[#1877F2]/10 rounded-md pointer-events-none z-5 transition-all duration-75"
+                      style={{
+                        top: timeToY(hoverCell.hours, hoverCell.minutes),
+                        height: HALF_HOUR_HEIGHT
+                      }}
+                    />
+                  )}
 
                 {/* Drag selection overlay */}
-                {dragSelection && dragSelection.dayIndex === dayIndex && (() => {
-                  const startTotal = dragSelection.startHours * 60 + dragSelection.startMinutes
-                  const endTotal = dragSelection.endHours * 60 + dragSelection.endMinutes
-                  const minTotal = Math.min(startTotal, endTotal)
-                  const maxTotal = Math.max(startTotal, endTotal)
-                  const top = timeToY(Math.floor(minTotal / 60), minTotal % 60)
-                  const height = Math.max(((maxTotal - minTotal) / 60) * HOUR_HEIGHT, HALF_HOUR_HEIGHT)
-                  return (
-                    <div
-                      className="absolute left-1 right-1 bg-[#1877F2]/20 border-2 border-[#1877F2] border-dashed rounded-lg pointer-events-none z-10"
-                      style={{ top, height }}
-                    />
-                  )
-                })()}
+                {dragSelection &&
+                  dragSelection.dayIndex === dayIndex &&
+                  (() => {
+                    const startTotal = dragSelection.startHours * 60 + dragSelection.startMinutes
+                    const endTotal = dragSelection.endHours * 60 + dragSelection.endMinutes
+                    const minTotal = Math.min(startTotal, endTotal)
+                    const maxTotal = Math.max(startTotal, endTotal)
+                    const top = timeToY(Math.floor(minTotal / 60), minTotal % 60)
+                    const height = Math.max(
+                      ((maxTotal - minTotal) / 60) * HOUR_HEIGHT,
+                      HALF_HOUR_HEIGHT
+                    )
+                    return (
+                      <div
+                        className="absolute left-1 right-1 bg-[#1877F2]/20 border-2 border-[#1877F2] border-dashed rounded-lg pointer-events-none z-10"
+                        style={{ top, height }}
+                      />
+                    )
+                  })()}
 
                 {/* Persisted selection overlay (shown while quick add is open) */}
-                {persistedSelection && persistedSelection.dayIndex === dayIndex && !dragSelection && (() => {
-                  const startTotal = persistedSelection.startHours * 60 + persistedSelection.startMinutes
-                  const endTotal = persistedSelection.endHours * 60 + persistedSelection.endMinutes
-                  const top = timeToY(persistedSelection.startHours, persistedSelection.startMinutes)
-                  const height = Math.max(((endTotal - startTotal) / 60) * HOUR_HEIGHT, HALF_HOUR_HEIGHT)
-                  return (
-                    <div
-                      className="absolute left-1 right-1 bg-[#1877F2]/20 border-2 border-[#1877F2] rounded-lg pointer-events-none z-10"
-                      style={{ top, height }}
-                    />
-                  )
-                })()}
+                {persistedSelection &&
+                  persistedSelection.dayIndex === dayIndex &&
+                  !dragSelection &&
+                  (() => {
+                    const startTotal =
+                      persistedSelection.startHours * 60 + persistedSelection.startMinutes
+                    const endTotal =
+                      persistedSelection.endHours * 60 + persistedSelection.endMinutes
+                    const top = timeToY(
+                      persistedSelection.startHours,
+                      persistedSelection.startMinutes
+                    )
+                    const height = Math.max(
+                      ((endTotal - startTotal) / 60) * HOUR_HEIGHT,
+                      HALF_HOUR_HEIGHT
+                    )
+                    return (
+                      <div
+                        className="absolute left-1 right-1 bg-[#1877F2]/20 border-2 border-[#1877F2] rounded-lg pointer-events-none z-10"
+                        style={{ top, height }}
+                      />
+                    )
+                  })()}
 
                 {/* Drop preview indicator */}
-                {draggedEvent && isDropTarget && dropTarget && (() => {
-                  const originalStart = new Date(draggedEvent.startTime)
-                  const originalEnd = new Date(draggedEvent.endTime)
-                  const durationMs = originalEnd.getTime() - originalStart.getTime()
-                  const durationMins = durationMs / (1000 * 60)
-                  const top = timeToY(dropTarget.hours, dropTarget.minutes)
-                  const height = (durationMins / 60) * HOUR_HEIGHT
-                  return (
-                    <div
-                      className="absolute left-1 right-1 bg-[#1877F2]/30 border-2 border-[#1877F2] rounded-lg pointer-events-none z-10"
-                      style={{ top, height: Math.max(height, HALF_HOUR_HEIGHT) }}
-                    />
-                  )
-                })()}
+                {draggedEvent &&
+                  isDropTarget &&
+                  dropTarget &&
+                  (() => {
+                    const originalStart = new Date(draggedEvent.startTime)
+                    const originalEnd = new Date(draggedEvent.endTime)
+                    const durationMs = originalEnd.getTime() - originalStart.getTime()
+                    const durationMins = durationMs / (1000 * 60)
+                    const top = timeToY(dropTarget.hours, dropTarget.minutes)
+                    const height = (durationMins / 60) * HOUR_HEIGHT
+                    return (
+                      <div
+                        className="absolute left-1 right-1 bg-[#1877F2]/30 border-2 border-[#1877F2] rounded-lg pointer-events-none z-10"
+                        style={{ top, height: Math.max(height, HALF_HOUR_HEIGHT) }}
+                      />
+                    )
+                  })()}
 
                 {/* Events */}
                 {eventGroups.map((group, groupIndex) => {

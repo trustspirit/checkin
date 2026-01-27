@@ -19,7 +19,9 @@ function PrintableBusManifest({
   const { t } = useTranslation()
 
   const getBusParticipants = (busId: string) => {
-    return participants.filter((p) => p.busId === busId).sort((a, b) => a.name.localeCompare(b.name))
+    return participants
+      .filter((p) => p.busId === busId)
+      .sort((a, b) => a.name.localeCompare(b.name))
   }
 
   const handlePrint = () => {
