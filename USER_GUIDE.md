@@ -14,14 +14,15 @@
    - [그룹 관리](#33-그룹-관리)
    - [객실 관리](#34-객실-관리)
    - [버스 관리](#35-버스-관리)
-   - [CSV 가져오기](#36-csv-가져오기)
-   - [CSV 내보내기](#37-csv-내보내기)
-   - [인쇄 기능](#38-인쇄-기능)
-   - [통계](#39-통계)
-   - [감사 로그](#310-감사-로그)
-   - [설정](#311-설정)
-   - [고유 키 시스템](#312-고유-키-시스템) ⭐ NEW
-4. [Key Generator 웹사이트](#4-key-generator-웹사이트) ⭐ NEW
+   - [스케줄 관리](#36-스케줄-관리) ⭐ NEW
+   - [CSV 가져오기](#37-csv-가져오기)
+   - [CSV 내보내기](#38-csv-내보내기)
+   - [인쇄 기능](#39-인쇄-기능)
+   - [통계](#310-통계)
+   - [감사 로그](#311-감사-로그)
+   - [설정](#312-설정)
+   - [고유 키 시스템](#313-고유-키-시스템)
+4. [Key Generator 웹사이트](#4-key-generator-웹사이트)
 5. [개발자 가이드](#5-개발자-가이드)
 
 ---
@@ -350,7 +351,122 @@ pnpm build:all
 
 ---
 
-### 3.6 CSV 가져오기
+### 3.6 스케줄 관리 ⭐ NEW
+
+좌측 사이드바의 **Schedule**을 클릭합니다.
+
+이벤트 기간 동안의 세션, 프로그램, 일정을 시각적으로 관리할 수 있는 스케줄 기능입니다.
+
+#### 보기 모드
+
+스케줄은 세 가지 보기 모드를 지원합니다:
+
+**일간 보기 (Day):**
+- 선택한 날짜의 스케줄만 표시
+- 세로 타임라인 형식 (위에서 아래로 시간 흐름)
+
+**주간 보기 (Week):**
+- 7일간의 스케줄을 한눈에 표시
+- 세로 타임라인 형식으로 일별 컬럼 표시
+
+**기간 설정 (Custom):**
+- 사용자가 직접 시작일과 종료일 지정
+- 대회/행사 기간에 맞춰 원하는 기간만 표시
+
+#### 뷰 방향 전환
+
+상단의 방향 토글로 타임라인 방향을 변경할 수 있습니다:
+
+- **세로 (Vertical)**: 위에서 아래로 시간이 흐르는 형태 (기본)
+- **가로 (Horizontal)**: 왼쪽에서 오른쪽으로 시간이 흐르는 형태
+
+#### 스케줄 추가
+
+**방법 1 - 추가 버튼:**
+1. 우측 상단의 **스케줄 추가** 버튼 클릭
+2. 제목, 날짜, 시작/종료 시간 입력
+3. 색상 선택 (자동 또는 수동)
+4. 메모 입력 (선택)
+5. **추가** 버튼 클릭
+
+**방법 2 - Quick Add (빠른 추가):**
+1. 스케줄 그리드에서 원하는 시간대를 **클릭** 또는 **드래그**
+2. 팝업에서 제목 입력
+3. 시간 조정 (시/분 단위로 미세 조정 가능)
+4. **추가** 버튼 클릭
+
+> 💡 **팁**: 드래그로 시간 범위를 선택하면 해당 시간대가 자동으로 설정됩니다.
+
+#### 스케줄 수정
+
+**스케줄 클릭:**
+- 스케줄 카드를 클릭하면 수정 모달이 열립니다
+- 제목, 시간, 색상, 메모 등 모든 정보 수정 가능
+
+**드래그 앤 드롭:**
+- 기존 스케줄을 드래그하여 다른 시간대나 날짜로 이동
+- 드래그 중 드롭 위치에 미리보기 표시
+
+#### 스케줄 삭제
+
+1. 스케줄 카드 클릭하여 수정 모달 열기
+2. **삭제** 버튼 클릭
+3. 확인 다이얼로그에서 **확인** 클릭
+
+#### 스케줄 색상
+
+스케줄마다 고유한 색상을 지정하여 구분할 수 있습니다:
+
+- **자동 색상**: 스케줄 생성 시 자동으로 색상 배정
+- **수동 선택**: 색상 팔레트에서 원하는 색상 선택
+
+#### 대회 기간 설정
+
+설정에서 대회/행사 기간을 미리 지정해두면 스케줄 보기에 바로 적용할 수 있습니다.
+
+**설정 방법:**
+1. **Settings** 페이지로 이동
+2. **대회 기간 설정** 섹션에서 시작일/종료일 입력
+3. **저장** 버튼 클릭
+
+**적용 방법:**
+- 스케줄 페이지 상단의 **대회 기간** 버튼 클릭
+- 설정된 대회 기간이 자동으로 표시됨
+
+#### 네비게이션
+
+- **← / →**: 이전/다음 기간으로 이동
+- **오늘**: 오늘 날짜로 이동
+- **대회 기간**: 설정된 대회 기간 전체 표시
+
+#### 스케줄 내보내기
+
+스케줄 데이터를 다양한 형식으로 내보낼 수 있습니다:
+
+**PDF 내보내기:**
+- **인쇄용 스케줄 PDF**: 깔끔한 인쇄용 레이아웃
+- **전체 스케줄 PDF**: 현재 보기 화면 그대로 PDF로 저장
+
+**기타 형식:**
+- **CSV**: 스프레드시트에서 편집 가능한 형식
+- **ICS**: 캘린더 앱으로 가져오기 가능 (Google Calendar, Apple Calendar 등)
+- **클립보드 복사**: 텍스트 형식으로 복사
+
+#### 호버 프리뷰
+
+스케줄 카드에 마우스를 올리면 상세 정보가 툴팁으로 표시됩니다:
+- 제목
+- 시작/종료 시간
+- 메모 (있는 경우)
+
+#### 키보드 단축키
+
+- **ESC**: Quick Add 팝업 또는 수정 모달 닫기
+- **↑/↓**: Quick Add에서 시간 조정 (시/분 스피너 포커스 시)
+
+---
+
+### 3.7 CSV 가져오기
 
 대량의 참가자 데이터를 CSV 파일로 가져올 수 있습니다.
 
@@ -389,7 +505,7 @@ name,email,gender,age,stake,ward,phoneNumber,groupName,roomNumber
 
 ---
 
-### 3.7 CSV 내보내기
+### 3.8 CSV 내보내기
 
 참가자 및 관련 데이터를 CSV 파일로 내보낼 수 있습니다.
 
@@ -420,7 +536,7 @@ name,email,gender,age,stake,ward,phoneNumber,groupName,roomNumber
 
 ---
 
-### 3.8 인쇄 기능 ⭐ NEW
+### 3.9 인쇄 기능
 
 그룹 명단, 객실 배정표, 버스 배치표를 인쇄할 수 있습니다.
 
@@ -474,7 +590,7 @@ name,email,gender,age,stake,ward,phoneNumber,groupName,roomNumber
 
 ---
 
-### 3.9 통계
+### 3.10 통계
 
 통계 페이지에서 등록 및 체크인 현황을 시각화된 차트로 확인할 수 있습니다.
 
@@ -521,7 +637,7 @@ name,email,gender,age,stake,ward,phoneNumber,groupName,roomNumber
 
 ---
 
-### 3.10 감사 로그
+### 3.11 감사 로그
 
 모든 데이터 변경 사항이 자동으로 기록됩니다.
 
@@ -552,7 +668,7 @@ name,email,gender,age,stake,ward,phoneNumber,groupName,roomNumber
 
 ---
 
-### 3.11 설정
+### 3.12 설정
 
 좌측 사이드바에서 **Settings**를 클릭합니다.
 
@@ -569,7 +685,7 @@ name,email,gender,age,stake,ward,phoneNumber,groupName,roomNumber
 
 ---
 
-### 3.12 고유 키 시스템 ⭐ NEW
+### 3.13 고유 키 시스템
 
 참가자별로 고유한 8자리 키를 생성하여 빠른 검색과 체크인에 활용할 수 있습니다.
 
@@ -745,9 +861,23 @@ services/
 hooks/
 ├── useStatistics.ts       # 통계 계산 로직
 ├── useExportPDF.ts        # PDF 내보내기 로직
-├── useBusManagement.ts    # 버스 관리 로직 ⭐ NEW
+├── useExportFullPDF.ts    # 전체 스케줄 PDF 내보내기 ⭐ NEW
+├── useBusManagement.ts    # 버스 관리 로직
 ├── useGroupFilter.ts      # 그룹 필터링/정렬
 ├── useRoomFilter.ts       # 객실 필터링/정렬
+└── index.ts               # 모듈 재export
+
+components/schedule/       # ⭐ NEW - 스케줄 관련 컴포넌트
+├── ScheduleWeekView.tsx   # 주간/기간 보기 (세로)
+├── ScheduleDayView.tsx    # 일간 보기 (세로)
+├── ScheduleTimelineView.tsx # 타임라인 보기 (가로)
+├── ScheduleHeader.tsx     # 스케줄 헤더 (네비게이션, 내보내기)
+├── ScheduleEventCard.tsx  # 스케줄 이벤트 카드
+├── QuickAddPopover.tsx    # 빠른 추가 팝오버
+├── AddScheduleModal.tsx   # 스케줄 추가/수정 모달
+├── PrintableSchedule.tsx  # 인쇄용 스케줄 레이아웃
+├── scheduleUtils.ts       # 스케줄 유틸리티 함수
+├── useScheduleGrid.ts     # 그리드 인터랙션 훅
 └── index.ts               # 모듈 재export
 
 i18n/
@@ -803,7 +933,7 @@ rooms/
 │   ├── createdAt: Timestamp
 │   └── updatedAt: Timestamp
 
-buses/                               # ⭐ NEW
+buses/
 ├── {busId}/
 │   ├── name: string
 │   ├── region: string
@@ -814,6 +944,16 @@ buses/                               # ⭐ NEW
 │   ├── notes: string
 │   ├── participantCount: number
 │   ├── arrivedAt: Timestamp | null  # 도착 시간
+│   ├── createdAt: Timestamp
+│   └── updatedAt: Timestamp
+
+schedules/                           # ⭐ NEW - 스케줄 이벤트
+├── {scheduleId}/
+│   ├── title: string                # 스케줄 제목
+│   ├── startTime: Timestamp         # 시작 시간
+│   ├── endTime: Timestamp           # 종료 시간
+│   ├── color: string                # 색상 (hex)
+│   ├── memo: string                 # 메모
 │   ├── createdAt: Timestamp
 │   └── updatedAt: Timestamp
 
